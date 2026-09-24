@@ -1,46 +1,47 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function Recource(stats) {
+export default function Recource() {
     const [resource, setResource] = useState([])
     const [bookings, setBookings] = useState([])
     const [bookingsIsOk, setBookingsIsOk] = useState(false)
     const [error, setError] = useState('')
+    const resource_id = window.sessionStorage.getItem("resource_id");
 
     useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL
+      const apiUrl = import.meta.env.VITE_API_URL
 
-    fetch(`${apiUrl}/api/resources/${stats.id}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Kunde inte hämta resursen')
-        }
+      fetch(`${apiUrl}/api/resources/${resource_id}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Kunde inte hämta resursen')
+          }
 
-        return response.json()
-      })
-      .then((data) => {
-        setResource(data)
-      })
-      .catch((error) => {
-        setError(error.message)
-      })
+          return response.json()
+        })
+        .then((data) => {
+          setResource(data)
+        })
+        .catch((error) => {
+          setError(error.message)
+        })
 
-    fetch(`${apiUrl}/api/bookings/resource/${stats.id}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Kunde inte hämta bokningarna')
-        }
+      fetch(`${apiUrl}/api/bookings/resource/${resource_id}`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Kunde inte hämta bokningarna')
+          }
 
-        return response.json()
-      })
-      .then((data) => {
-        setBookings(data)
-        setBookingsIsOk(true)
-      })
-      .catch((error) => {
-        setError(error.message)
-      })
-  }, [])
+          return response.json()
+        })
+        .then((data) => {
+          setBookings(data)
+          setBookingsIsOk(true)
+        })
+        .catch((error) => {
+          setError(error.message)
+        })
+    }, [])
 
   return (
     <main className="main" id="main">
@@ -51,7 +52,7 @@ export default function Recource(stats) {
     <h3>Bokningar</h3>
     {bookingsIsOk ? (
         bookings.map((booking) => (
-            <div key={booking._id} onClick={() => booking(booking._id) } class="booking-card">
+            <div key={booking._id} onClick={() => booking(booking._id) } className="booking-card">
                 <p><strong>{booking.user}</strong></p>
                 <p>{booking.start_time} - {booking.end_time}</p>
                 <p className="status">{booking.status}</p>
@@ -66,7 +67,7 @@ export default function Recource(stats) {
 
     {/* <h3>Ny bokning</h3>
     <form method="POST" action="/bookings" className="booking-form">
-        <input type="hidden" name="resource_id" value="<%= resource.id %>" />
+        <input type="hidden" name="resource_id" value="${resource_id}" />
 
         <label for="user">Användare</label>
         <input type="text" name="user" placeholder="namn@student.bth.se" required />

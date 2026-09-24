@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 export default function Homepage() {
   const [resources, setResources] = useState([])
   const [error, setError] = useState('')
+  window.sessionStorage.clear();
 
   const navigate = useNavigate();
   
@@ -11,8 +12,9 @@ export default function Homepage() {
     // navigate(`/resources/new`, { replace: true });
   }
 
-  const resource = (id) => {
-    navigate(`/resource/`, { replace: true, state: { id: id } });
+  const resourceHandle = (id) => {
+    window.sessionStorage.setItem("resource_id", id);
+    navigate(`/resource/`, { replace: true });
   }
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function Homepage() {
       <button onClick={addNewResource} className="btn">Lägg till resurs</button>
 
       {resources.map((resource) => (
-        <div key={resource._id} onClick={() => resource(resource._id) } className="resource-card">
+        <div key={resource._id} onClick={() => resourceHandle(resource._id) } className="resource-card">
           <h3>{resource.name}</h3>
           <div className="resource-meta">
             <p>Typ: {resource.type}</p>
