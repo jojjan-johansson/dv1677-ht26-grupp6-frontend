@@ -43,5 +43,7 @@ npm run build
 Dokumentera löpande vad ni gjort och hur ni löst problem.
 
 - Vecka 3: Vi började med att skapa en ren grundsida med React och Vite, skapade en .env fil och la sedan in .env i .gitignore
-- Vecka 4:
-- Vecka 5:
+
+- Vecka 4: Vi migrerade backend från SQLite till MongoDB och anpassade resurser och bokningar till MongoDB. Backend gjordes om till ett JSON-API och frontend kopplades till API:t för att hämta och visa resurser. Vi lade även till API-tester med Vitest, Supertest och MongoDB Memory Server och delade upp app och server för att testerna skulle kunna köras utan att starta webbservern.
+
+- Vecka 5: Vi containeriserade backend och MongoDB med Docker och driftsatte backend på gruppens VPS. GitHub Actions sattes upp för CI och automatisk deployment via GHCR och SSH. Secrets och deploy key konfigurerades för deployment. Backend publicerades via Caddy med HTTPS. Frontend konfigurerades för GitHub Pages med GitHub Actions och kopplades till den driftsatta backendens API. Routing anpassades för GitHub Pages projektadress.
