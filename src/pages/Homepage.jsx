@@ -7,7 +7,7 @@ export default function Homepage() {
   window.sessionStorage.clear();
 
   const navigate = useNavigate();
-  
+
   const addNewResource = () => {
     // navigate(`/resources/new`, { replace: true });
   }
@@ -36,24 +36,35 @@ export default function Homepage() {
       })
   }, [])
 
-  
-
   return (
     <main className="main" id="main">
       <h2>Resurser</h2>
-      <button onClick={addNewResource} className="btn">Lägg till resurs</button>
+
+      <button onClick={addNewResource} className="btn">
+        Lägg till resurs
+      </button>
+
+      {error && <p>{error}</p>}
 
       {resources.map((resource) => (
-        <div key={resource._id} onClick={() => resourceHandle(resource._id) } className="resource-card">
+        <div key={resource._id} className="resource-card">
           <h3>{resource.name}</h3>
+
           <div className="resource-meta">
             <p>Typ: {resource.type}</p>
             <p>{resource.description}</p>
             <p>Kapacitet: {resource.capacity}</p>
           </div>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={() => resourceHandle(resource._id)}
+          >
+            Visa / boka
+          </button>
         </div>
       ))}
     </main>
   )
-
 }
