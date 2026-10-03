@@ -12,7 +12,7 @@ export default function App() {
 
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/dv1677-ht26-grupp6-frontend">
       {/* <Layout> */}
         <Header />
           {/* Routes */}
