@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getResource, getBookingsByResource, getUsers, addBooking, deleteBookings } from "../api";
 
 export default function Recource() {
   const [resource, setResource] = useState({});
+  const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookedBy, setBookedBy] = useState("");
@@ -10,52 +12,29 @@ export default function Recource() {
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
 
+
   const resourceId = window.sessionStorage.getItem("resource_id");
-  const apiUrl = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
 
   const loadBookings = () => {
-    return fetch(`${apiUrl}/api/bookings/resource/${resourceId}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Kunde inte hämta bokningarna");
-        }
 
-        return response.json();
-      })
-      .then((data) => {
-        setBookings(data);
-      });
+    return getBookingsByResource(resourceId)
+            .then(setBookings)
+            .catch(setError)
+            .finally(() => setLoading(false))
   };
 
   useEffect(() => {
-    fetch(`${apiUrl}/api/resources/${resourceId}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Kunde inte hämta resursen");
-        }
-
-        return response.json();
-      })
-      .then((data) => {
-        setResource(data);
-      })
-      .catch((error) => {
-        setError(error.message);
-      });
+    getResource(resourceId)
+      .then(setResource)
+      .catch(setError)
+          .finally(() => setLoading(false))
 
     loadBookings().catch((error) => {
       setError(error.message);
     });
 
-    fetch(`${apiUrl}/api/users`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Kunde inte hämta användare");
-        }
-
-        return response.json();
-      })
+    getUsers()
       .then((data) => {
         setUsers(data);
 
@@ -63,9 +42,8 @@ export default function Recource() {
           setBookedBy(data[0]._id);
         }
       })
-      .catch((error) => {
-        setError(error.message);
-      });
+      .catch(setError)
+      .finally(() => setLoading(false))
   }, []);
 
   const getUserEmail = (userId) => {
@@ -76,6 +54,7 @@ export default function Recource() {
   const createBooking = async (event) => {
     event.preventDefault();
     setError("");
+    setLoading(true)
 
     if (!bookedBy || !startTime || !endTime) {
       setError("Fyll i alla fält.");
@@ -88,18 +67,14 @@ export default function Recource() {
     }
 
     try {
-      const response = await fetch(`${apiUrl}/api/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
+
+      const data = {
           resource_id: resourceId,
           booked_by: bookedBy,
           start_time: startTime,
           end_time: endTime
-        })
-      });
+        }
+      const response = await addBooking(data)
 
       if (!response.ok) {
         throw new Error("Kunde inte skapa bokningen");
@@ -111,19 +86,17 @@ export default function Recource() {
       await loadBookings();
     } catch (error) {
       setError(error.message);
+    } finally {
+      setLoading(false)
     }
   };
 
   const deleteBooking = async (bookingId) => {
     setError("");
+    setLoading(true)
 
     try {
-      const response = await fetch(
-        `${apiUrl}/api/bookings/${bookingId}`,
-        {
-          method: "DELETE"
-        }
-      );
+      const response = await deleteBookings(bookingId)
 
       if (!response.ok) {
         throw new Error("Kunde inte ta bort bokningen");
@@ -132,12 +105,16 @@ export default function Recource() {
       await loadBookings();
     } catch (error) {
       setError(error.message);
+    } finally {
+      setLoading(false)
     }
   };
 
   const backToResources = () => {
     navigate("/");
   };
+
+  if (loading) return <p>Laddar..</p>
 
   return (
     <main className="main" id="main">
@@ -158,6 +135,7 @@ export default function Recource() {
       <p>Kapacitet: {resource.capacity}</p>
 
       {error && <p>{error}</p>}
+      
 
       <h3>Bokningar</h3>
 

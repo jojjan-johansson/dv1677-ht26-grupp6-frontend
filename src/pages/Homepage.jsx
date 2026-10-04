@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getResources } from "../api";
 
 export default function Homepage() {
   const [resources, setResources] = useState([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   window.sessionStorage.clear();
 
@@ -18,22 +20,10 @@ export default function Homepage() {
   }
 
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL
-
-    fetch(`${apiUrl}/api/resources`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Kunde inte hämta resurser')
-        }
-
-        return response.json()
-      })
-      .then((data) => {
-        setResources(data)
-      })
-      .catch((error) => {
-        setError(error.message)
-      })
+    getResources()
+          .then(setResources)
+          .catch(setError)
+          .finally(() => setLoading(false))
   }, [])
 
   return (
