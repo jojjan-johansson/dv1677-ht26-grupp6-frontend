@@ -35,8 +35,8 @@ npm run build
 
 ## Driftsatt
 
-- Frontend: Läggs till när frontend är driftsatt.
-- Backend: Läggs till när backend är driftsatt.
+- Frontend: [https://jojjan-johansson.github.io/dv1677-ht26-grupp6-frontend/](https://jojjan-johansson.github.io/dv1677-ht26-grupp6-frontend/)
+- Backend: [https://dv1677-geordi.nplab.bth.se/](https://dv1677-geordi.nplab.bth.se/)
 
 ## Tillvägagångssätt
 
