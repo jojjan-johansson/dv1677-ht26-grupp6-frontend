@@ -294,12 +294,38 @@ main {
     margin-bottom: 1.4rem;
 }
 
+.blue {
+  background-color: rgb(81, 81, 249);
+}
+
 .btn:hover {
     background-color: #27AE34;
 }
 
+.blue:hover {
+    background-color: rgb(61, 61, 190);
+}
+
+.nav {
+  background-color: #A1DFA8;
+  padding: 5px opx;
+}
+
+.navChoice {
+  border: none;
+  padding: 5px;
+  margin: 0px 5px;
+  background: #A1DFA8;
+}
+
+.navChoice:hover {
+  background-color: #27AE34;
+  color: #fff;
+}
+
 .resource-form,
-.booking-form {
+.booking-form,
+.login-form {
     display: flex;
     flex-direction: column;
 }

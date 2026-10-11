@@ -1,6 +1,6 @@
 const BASE_URL = import.meta.env.VITE_API_URL || ''
 
-async function request(path) {
+async function requestGet(path) {
   const res = await fetch(`${BASE_URL}${path}`)
 
   if (!res.ok) {
@@ -41,27 +41,34 @@ async function requestDelete(path) {
   return res
 }
 
+
+// Resurces
+
 export function getResources() {
-  return request('/api/resources')
+  return requestGet('/api/resources')
 }
 
 export function getResource(id) {
-  return request(`/api/resources/${id}`)
+  return requestGet(`/api/resources/${id}`)
 }
 
 export function getBookingsByResource(id) {
-  return request(`/api/bookings/resource/${id}`)
+  return requestGet(`/api/bookings/resource/${id}`)
 }
 
-export function getUsers() {
-  return request(`/api/users`)
-}
+// Booking
 
 export function addBooking(body) {
   return requestPost(`/api/bookings`, body)
 }
 
 export function deleteBookings(id) {
-  console.log("ok")
   return requestDelete(`/api/bookings/${id}`)
+}
+
+
+// User
+
+export function getUsers() {
+  return requestGet(`/api/users`)
 }

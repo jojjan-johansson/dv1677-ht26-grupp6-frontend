@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResource, getBookingsByResource, getUsers, addBooking, deleteBookings } from "../api";
+import { getResource, getBookingsByResource, getUsers, addBooking, deleteBookings } from "../api/api";
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Recource() {
+  const { token, user } = useAuth()
   const [resource, setResource] = useState({});
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState([]);
