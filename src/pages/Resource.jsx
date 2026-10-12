@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResource, getBookingsByResource, getUsers, addBooking, deleteBookings } from "../api/api";
+import { getResource, getUsers } from "../api/api.js";
+import { getBookings, createBooking, cancelBooking, deleteBooking } from "../api/bookings.js";
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Recource() {
@@ -18,12 +19,15 @@ export default function Recource() {
   const resourceId = window.sessionStorage.getItem("resource_id");
   const navigate = useNavigate();
 
-  const loadBookings = () => {
+  const loadBookings = useCallback(async () => {
+    if (!token) return
+    const b = await getBookings(token)
+    setBookings(b.filter(bookings => bookings.resource_id === resourceId || bookings.resource_id?._id === resourceId))
+  }, [token, resourceId])
 
-    return getBookingsByResource(resourceId)
-            .then(setBookings)
-            .catch(setError)
-            .finally(() => setLoading(false))
+  const getUserEmail = (userId) => {
+    const user = users.find((user) => user._id === userId);
+    return user ? user.email : userId;
   };
 
   useEffect(() => {
@@ -34,39 +38,50 @@ export default function Recource() {
 
     loadBookings().catch((error) => {
       setError(error.message);
+      console.log(error.message)
     });
 
     getUsers()
       .then((data) => {
         setUsers(data);
 
-        if (data.length > 0) {
+        if (user?.role === 'admin' && data.length > 0) {
           setBookedBy(data[0]._id);
+        } else if (user?._id) {
+          setBookedBy(user._id);
         }
       })
       .catch(setError)
       .finally(() => setLoading(false))
   }, []);
 
-  const getUserEmail = (userId) => {
-    const user = users.find((user) => user._id === userId);
-    return user ? user.email : userId;
-  };
+  const formattedTime = (startTime, endTime) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
 
-  const createBooking = async (event) => {
+    return `${start.toLocaleString('sv-SE', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    })} - ${end.toLocaleString('sv-SE', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    })}`;
+  }
+
+  const createABooking = async (event) => {
     event.preventDefault();
     setError("");
-    setLoading(true)
-
+    
     if (!bookedBy || !startTime || !endTime) {
       setError("Fyll i alla fält.");
       return;
     }
-
+    
     if (new Date(endTime) <= new Date(startTime)) {
       setError("Sluttiden måste vara efter starttiden.");
       return;
     }
+    setLoading(true)
 
     try {
 
@@ -76,11 +91,7 @@ export default function Recource() {
           start_time: startTime,
           end_time: endTime
         }
-      const response = await addBooking(data)
-
-      if (!response.ok) {
-        throw new Error("Kunde inte skapa bokningen");
-      }
+      await createBooking(token, data)
 
       setStartTime("");
       setEndTime("");
@@ -93,16 +104,27 @@ export default function Recource() {
     }
   };
 
-  const deleteBooking = async (bookingId) => {
+  const cancelTheBooking = async (bookingId) => {
     setError("");
     setLoading(true)
 
     try {
-      const response = await deleteBookings(bookingId)
+      await cancelBooking(token, bookingId)
 
-      if (!response.ok) {
-        throw new Error("Kunde inte ta bort bokningen");
-      }
+      await loadBookings();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false)
+    }
+  };
+
+  const deleteTheBooking = async (bookingId) => {
+    setError("");
+    setLoading(true)
+
+    try {
+      await deleteBooking(token, bookingId)
 
       await loadBookings();
     } catch (error) {
@@ -144,12 +166,11 @@ export default function Recource() {
       {bookings.length > 0 ? (
         bookings.map((booking) => (
           <div key={booking._id} className="booking-card">
-            <p>
-              <strong>{getUserEmail(booking.booked_by)}</strong>
-            </p>
+
+            <p>Bokad av: {getUserEmail(booking.booked_by)}</p>
 
             <p>
-              {booking.start_time} - {booking.end_time}
+              {formattedTime(booking.start_time, booking.end_time )}
             </p>
 
             <p className="status">{booking.status}</p>
@@ -157,10 +178,23 @@ export default function Recource() {
             <button
               type="button"
               className="btn"
-              onClick={() => deleteBooking(booking._id)}
+              onClick={() => cancelTheBooking(booking._id)}
             >
-              Ta bort bokning
+              Avboka
             </button>
+
+            {user.role === 'admin' ? (
+          <>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => deleteTheBooking(booking._id)}
+            >
+              Ta bort
+            </button>
+          </>)
+        : null
+        }
           </div>
         ))
       ) : (
@@ -169,21 +203,27 @@ export default function Recource() {
 
       <h3>Ny bokning</h3>
 
-      <form className="booking-form" onSubmit={createBooking}>
-        <label htmlFor="booked_by">Användare</label>
+      <form className="booking-form" onSubmit={createABooking}>
 
-        <select
-          id="booked_by"
-          value={bookedBy}
-          onChange={(event) => setBookedBy(event.target.value)}
-          required
-        >
-          {users.map((user) => (
-            <option key={user._id} value={user._id}>
-              {user.email}
-            </option>
-          ))}
-        </select>
+        {user.role === 'admin' ? (
+          <>
+            <label htmlFor="booked_by">Användare</label>
+
+            <select
+              id="booked_by"
+              value={bookedBy}
+              onChange={(event) => setBookedBy(event.target.value)}
+              required
+            >
+              {users.map((user) => (
+                <option key={user._id} value={user._id}>
+                  {user.email}
+                </option>
+              ))}
+            </select>
+          </>)
+        : null
+        }
 
         <label htmlFor="start_time">Starttid</label>
 

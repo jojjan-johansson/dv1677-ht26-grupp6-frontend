@@ -56,16 +56,6 @@ export function getBookingsByResource(id) {
   return requestGet(`/api/bookings/resource/${id}`)
 }
 
-// Booking
-
-export function addBooking(body) {
-  return requestPost(`/api/bookings`, body)
-}
-
-export function deleteBookings(id) {
-  return requestDelete(`/api/bookings/${id}`)
-}
-
 
 // User
 

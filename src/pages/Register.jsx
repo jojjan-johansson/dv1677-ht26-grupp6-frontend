@@ -7,32 +7,31 @@ import { useAuth } from '../context/AuthContext.jsx'
 export default function RegisterPage() {
   const [ userEmail, setUserEmail ] = useState("")
   const [ userPassword, setUserPassword ] = useState("")
+  const [ error, setError ] = useState("")
+  const [ loading, setLoading ] = useState(false)
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const loginLink = () => {
     navigate("/login", { replace: true });
   };
   
-  const login = async (event) => {
+  const registerUser = async (event) => {
     event.preventDefault();
     setError("");
-    setLoading(true)
-
-    // localStorage.setItem('token', data.token)
-
+    
     if (!userEmail || !userPassword) {
       setError("Fyll i alla fält.");
       return;
     }
+    
+    setLoading(true)
 
     try {
       const data = await apiRegister(userEmail, userPassword)
-      register(data.user, data.token)
+      login(data.user, data.token)
 
-      if (!response.ok) {
-        throw new Error("Kunde inte regristrera dig");
-      }
-      navigate('/')
+      navigate('/', { replace: true })
     } catch (error) {
       setError(error.message);
     } finally {
@@ -43,7 +42,7 @@ export default function RegisterPage() {
   return (
     <main className="main" id="main">
       <h3>Regristrering</h3>
-      <form className="login-form" onSubmit={login}>
+      <form className="login-form" onSubmit={registerUser}>
 
         <label htmlFor="user_name">Email</label>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import './css/App.css'
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 
 import Header from './pages/Header';
@@ -11,6 +11,11 @@ import Homepage from './pages/Homepage';
 import Recource from './pages/Resource';
 import Login from './pages/Login';
 import RegisterPage from './pages/Register';
+
+function ProtectedRoute({ children }) {
+  const { token } = useAuth()
+  return token ? children : <Navigate to="/login" />
+}
 
 function Nav() {
   const navigate = useNavigate();
@@ -30,7 +35,7 @@ function Nav() {
       {user ? (
         <>
           <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{user.email}</span>
-          <button className="secondary" style={{ padding: '0.3rem 0.7rem' }} onClick={logout}>Logga ut</button>
+          <button className="navChoice" onClick={logout}>Logga ut</button>
         </>
       ) : (
         <>
@@ -54,10 +59,10 @@ export default function App() {
   
 
   return (
+    <AuthProvider>
     <BrowserRouter basename="/dv1677-ht26-grupp6-frontend">
       {/* <Layout> */}
         <Header />
-          <AuthProvider>
             <Nav />
             {/* Routes */}
             <Routes>
@@ -82,13 +87,15 @@ export default function App() {
               <Route
                 path="/resource"
                 element={
-                  <Recource />
+                  <ProtectedRoute>
+                    <Recource />
+                  </ProtectedRoute>
                 }
               />
             </Routes>
-          </AuthProvider>
         <Footer />
       {/* </Layout> */}
     </BrowserRouter>
+    </AuthProvider>
   );
 }

@@ -1,37 +1,37 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as apiLogin } from '../api/auth.js'
+import { useAuth } from '../context/AuthContext.jsx'
 
 
 export default function Login() {
   const [ userEmail, setUserEmail ] = useState("")
   const [ userPassword, setUserPassword ] = useState("")
+  const [ error, setError ] = useState("")
+  const [ loading, setLoading ] = useState(false)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
 
   const registerLink = () => {
     navigate("/register", { replace: true });
   };
   
-  const login = async (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
-    setLoading(true)
-
-    // localStorage.setItem('token', data.token)
-
+    
     if (!userEmail || !userPassword) {
       setError("Fyll i alla fält.");
       return;
     }
+    
+    setLoading(true)
 
     try {
       const data = await apiLogin(userEmail, userPassword)
       login(data.user, data.token)
 
-      if (!response.ok) {
-        throw new Error("Kunde inte logga in");
-      }
       navigate('/')
     } catch (error) {
       setError(error.message);
@@ -43,14 +43,14 @@ export default function Login() {
   return (
     <main className="main" id="main">
       <h3>Logga in</h3>
-      <form className="login-form" onSubmit={login}>
+      <p>{error}</p>
+      <form className="login-form" onSubmit={handleLogin}>
 
         <label htmlFor="user_name">Email</label>
 
         <input
           id="user_name"
           type="email"
-          // value={startTime}
           onChange={(event) => setUserEmail(event.target.value)}
           required
         />
@@ -59,8 +59,7 @@ export default function Login() {
 
         <input
           id="user_password"
-          type="text"
-          // value={endTime}
+          type="password"
           onChange={(event) => setUserPassword(event.target.value)}
           required
         />
