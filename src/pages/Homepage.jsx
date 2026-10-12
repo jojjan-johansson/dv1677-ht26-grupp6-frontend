@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResources } from "../api/api";
+import { getResources } from "../api/resources.js";
 
 export default function Homepage() {
   const [resources, setResources] = useState([])

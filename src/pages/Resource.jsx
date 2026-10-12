@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResource, getUsers } from "../api/api.js";
+import { getResource} from "../api/resources.js";
+import { getUsers } from "../api/users.js";
 import { getBookings, createBooking, cancelBooking, deleteBooking } from "../api/bookings.js";
 import { useAuth } from '../context/AuthContext.jsx'
 
