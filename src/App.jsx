@@ -11,6 +11,7 @@ import Homepage from './pages/Homepage';
 import Recource from './pages/Resource';
 import Login from './pages/Login';
 import RegisterPage from './pages/Register';
+import EditBooking from './pages/EditBooking.jsx';
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth()
@@ -89,6 +90,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Recource />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/edit_booking"
+                element={
+                  <ProtectedRoute>
+                    <EditBooking />
                   </ProtectedRoute>
                 }
               />

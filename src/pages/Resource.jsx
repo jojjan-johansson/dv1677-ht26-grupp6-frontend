@@ -135,6 +135,12 @@ export default function Recource() {
     }
   };
 
+
+  const editTheBooking = (id) => {
+    window.sessionStorage.setItem("booking_id", id);
+    navigate(`/edit_booking/`, { replace: true });
+  }
+
   const backToResources = () => {
     navigate("/");
   };
@@ -182,6 +188,14 @@ export default function Recource() {
               onClick={() => cancelTheBooking(booking._id)}
             >
               Avboka
+            </button>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={() => editTheBooking(booking._id)}
+            >
+              Ändra bokning
             </button>
 
             {user.role === 'admin' ? (

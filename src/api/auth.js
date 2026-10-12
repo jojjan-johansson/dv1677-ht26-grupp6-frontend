@@ -21,7 +21,3 @@ export async function login(email, password) {
   if (!res.ok) throw new Error(data.error || 'Login failed')
   return data
 }
-
-export function documents (body) {
-  return requestGet(`/api/documents`)
-}

@@ -10,9 +10,26 @@ export async function getBookings(token) {
   return res.json()
 }
 
+export async function getBooking(token, id) {
+  const res = await fetch(`${BASE_URL}/api/bookings/${id}`, { headers: authHeader(token) })
+  if (!res.ok) throw new Error('Failed to fetch bookings')
+  return res.json()
+}
+
 export async function createBooking(token, body) {
   const res = await fetch(`${BASE_URL}/api/bookings`, {
     method: 'POST',
+    headers: authHeader(token),
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Booking failed')
+  return data
+}
+
+export async function editBooking(token, id, body) {
+  const res = await fetch(`${BASE_URL}/api/bookings/${id}`, {
+    method: 'PUT',
     headers: authHeader(token),
     body: JSON.stringify(body),
   })
