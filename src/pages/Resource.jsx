@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResource} from "../api/resources.js";
+import { getResource } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
-import { getBookings, createBooking, cancelBooking, deleteBooking } from "../api/bookings.js";
+import { getBookings, createBooking, cancelBooking, editBooking } from "../api/bookings.js";
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Recource() {
@@ -11,6 +11,10 @@ export default function Recource() {
   const [loading, setLoading] = useState(true)
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
+  const [vcpus, setVcpus] = useState(1);
+  const [ramMb, setRamMb] = useState(1024);
+  const [diskGb, setDiskGb] = useState(1);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [bookedBy, setBookedBy] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -31,11 +35,14 @@ export default function Recource() {
     return user ? user.email : userId;
   };
 
+
   useEffect(() => {
+    
     getResource(resourceId)
-      .then(setResource)
-      .catch(setError)
-          .finally(() => setLoading(false))
+    .then(setResource)
+    .catch(setError)
+    .finally(() => setLoading(false))
+    
 
     loadBookings().catch((error) => {
       setError(error.message);
@@ -54,7 +61,7 @@ export default function Recource() {
       })
       .catch(setError)
       .finally(() => setLoading(false))
-  }, []);
+  }, [date, user, loadBookings]);
 
   const formattedTime = (startTime, endTime) => {
     const start = new Date(startTime);
@@ -68,6 +75,7 @@ export default function Recource() {
       timeStyle: 'short'
     })}`;
   }
+
 
   const createABooking = async (event) => {
     event.preventDefault();
@@ -83,14 +91,19 @@ export default function Recource() {
       return;
     }
     setLoading(true)
-
     try {
-
+      const want = {}
+      if (resource.provider === "proxmox") {
+        want = {vcpus: vcpus, ramMb: ramMb, diskGb: diskGb}
+      } else if (resource.provider === "openstack") {
+        want = {vcpus: vcpus, ramMb: ramMb}
+      }
       const data = {
           resource_id: resourceId,
           booked_by: bookedBy,
           start_time: startTime,
-          end_time: endTime
+          end_time: endTime,
+          want: want
         }
       await createBooking(token, data)
 
@@ -103,6 +116,14 @@ export default function Recource() {
     } finally {
       setLoading(false)
     }
+
+    setSelectedSlot(null);
+    setStartTime("");
+    setEndTime("");
+    setVcpus(1);
+    setRamMb(1024);
+    setDiskGb(1);
+    await loadBookings();
   };
 
   const cancelTheBooking = async (bookingId) => {
@@ -120,12 +141,23 @@ export default function Recource() {
     }
   };
 
-  const deleteTheBooking = async (bookingId) => {
+
+  const editTheBooking = async (id) => {
     setError("");
-    setLoading(true)
+    setLoading(true);
+
+    const newEndTime = new Date(endTime)
+
+    newEndTime.setHours(newEndTime.getHours() + 1)
+
+
+    const data = {
+          resource_id: resourceId,
+          end_time: newEndTime
+        }
 
     try {
-      await deleteBooking(token, bookingId)
+      await editBooking(token, id, data)
 
       await loadBookings();
     } catch (error) {
@@ -133,12 +165,6 @@ export default function Recource() {
     } finally {
       setLoading(false)
     }
-  };
-
-
-  const editTheBooking = (id) => {
-    window.sessionStorage.setItem("booking_id", id);
-    navigate(`/edit_booking/`, { replace: true });
   }
 
   const backToResources = () => {
@@ -195,21 +221,8 @@ export default function Recource() {
               className="btn"
               onClick={() => editTheBooking(booking._id)}
             >
-              Ändra bokning
+              Förläng din bokning med 1 timme
             </button>
-
-            {user.role === 'admin' ? (
-          <>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => deleteTheBooking(booking._id)}
-            >
-              Ta bort
-            </button>
-          </>)
-        : null
-        }
           </div>
         ))
       ) : (
@@ -240,6 +253,18 @@ export default function Recource() {
         : null
         }
 
+        <div className="date">
+          <label htmlFor="date">Dag</label>
+          <br />
+          <input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
+
         <label htmlFor="start_time">Starttid</label>
 
         <input
@@ -259,6 +284,54 @@ export default function Recource() {
           onChange={(event) => setEndTime(event.target.value)}
           required
         />
+
+        {resource.provider === "openstack" || resource.provider === "proxmox" ? (
+        <div>
+          <label>Behov</label>
+
+          <div className="wants">
+            <label htmlFor="vcpus">vCPUs</label>
+            <input
+              id="vcpus"
+              type="number"
+              value={vcpus}
+              min="1"
+              max="5"
+              onChange={(e) => setVcpus(e.target.value)}
+              required
+            />
+
+            <label htmlFor="ramMb">RAM (MB)</label>
+            <input
+              id="ramMb"
+              type="number"
+              value={ramMb}
+              min="1024"
+              max="4096"
+              step="1024"
+              onChange={(e) => setRamMb(e.target.value)}
+              required
+            />
+
+            {resource.provider === "proxmox" && (
+              <>
+                <label htmlFor="diskGb">Disk (GB)</label>
+                <input
+                  id="diskGb"
+                  type="number"
+                  value={diskGb}
+                  min="1"
+                  max="5"
+                  onChange={(e) => setDiskGb(e.target.value)}
+                  required
+                />
+              </>
+            )}
+          </div>
+        </div>
+        ) : (
+          <div>Inga behov</div>
+        )}
 
         <button type="submit" className="btn">
           Boka

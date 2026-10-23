@@ -46,12 +46,3 @@ export async function cancelBooking(token, id) {
   if (!res.ok) throw new Error('Failed to cancel booking')
   return res.json()
 }
-
-export async function deleteBooking(token, id) {
-  const res = await fetch(`${BASE_URL}/api/booking/delete/${id}`, {
-    method: 'DELETE',
-    headers: authHeader(token),
-  })
-  if (!res.ok) throw new Error('Failed to delete booking')
-  return res.json()
-}
