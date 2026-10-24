@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 
-import { getResource } from "../api/resources.js";
+import { getResource, getAvailability } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
 import {
+  getBookings,
   createBooking,
   cancelBooking,
   editBooking
@@ -24,6 +25,8 @@ export default function Recource() {
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookedBy, setBookedBy] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null)
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [date, setDate] = useState(
@@ -34,28 +37,20 @@ export default function Recource() {
   const [diskGb, setDiskGb] = useState(1);
   const [error, setError] = useState("");
 
-  const loadBookings = useCallback(async () => {
-    if (!token || !resourceId) return;
+   const loadBookings = useCallback(async () => {
+    if (!token || !resourceId) return
+    const b = await getBookings(token)
+    setBookings(b.filter(bookings => bookings.resource_id === resourceId || bookings.resource_id?._id === resourceId))
+  }, [token, resourceId])
 
-    const baseUrl = import.meta.env.VITE_API_URL || "";
+  
+  const loadAvailability = useCallback(async () => {
+    if (!token) return
+    const s = await getAvailability(resourceId, date)
+    setSlots(s)
+    setSelectedSlot(null)
 
-    const response = await fetch(
-      `${baseUrl}/api/bookings/resource/${resourceId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Kunde inte hämta resursens bokningar.");
-    }
-
-    const data = await response.json();
-
-    setBookings(Array.isArray(data) ? data : []);
-  }, [token, resourceId]);
+  }, [token, resourceId, date])
 
   // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
@@ -120,6 +115,7 @@ export default function Recource() {
         }
 
         await loadBookings();
+        await loadAvailability();
 
         if (user?.role === "admin") {
           const userData = await getUsers();
@@ -150,6 +146,7 @@ export default function Recource() {
   }, [
     resourceId,
     loadBookings,
+    loadAvailability,
     user?._id,
     user?.role
   ]);
@@ -185,6 +182,13 @@ export default function Recource() {
       timeStyle: "short"
     })}`;
   };
+
+  const timeInPast = (startTime) => {
+    const start = new Date(startTime).getTime();
+    const currentTime = new Date();
+
+    return start <= currentTime;
+  }
 
   // Skapa bokning med Beckas broker-behov.
   const createABooking = async (event) => {
@@ -236,6 +240,7 @@ export default function Recource() {
       setDiskGb(1);
 
       await loadBookings();
+      await loadAvailability();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -431,33 +436,41 @@ export default function Recource() {
           />
         </div>
 
-        <label htmlFor="start_time">
-          Starttid
-        </label>
+        <div className="timeslots">
+          <label>Tillgängliga tider</label>
+          <div className="slot-grid">
+          {slots.map(slot => {
+            if (timeInPast(slot.startsAt)){
+              return(null)
+            } else {
+              const hour = new Date(slot.startsAt).getUTCHours()
 
-        <input
-          id="start_time"
-          type="datetime-local"
-          value={startTime}
-          onChange={(event) =>
-            setStartTime(event.target.value)
-          }
-          required
-        />
+              const isSelected = selectedSlot?.startsAt === slot.startsAt
+              return (
+                <div
+                key={slot.startsAt} className={`slot ${!slot.available ? 'booked' : isSelected ? 'selected' : 'available'}`}
+                onClick={() => {
+                if (!slot.available) return;
 
-        <label htmlFor="end_time">
-          Sluttid
-        </label>
-
-        <input
-          id="end_time"
-          type="datetime-local"
-          value={endTime}
-          onChange={(event) =>
-            setEndTime(event.target.value)
-          }
-          required
-        />
+                if (isSelected) {
+                  setSelectedSlot(null);
+                  setStartTime("");
+                  setEndTime("");
+                } else {
+                  setSelectedSlot(slot);
+                  setStartTime(slot.startsAt);
+                  setEndTime(slot.endsAt);
+                }
+              }}
+                >
+                  {hour}:00 – {hour + 1}:00
+                </div>
+              )
+            }
+            
+          })}
+          </div>
+        </div>
 
         {(resource.provider === "openstack" ||
           resource.provider === "proxmox") && (

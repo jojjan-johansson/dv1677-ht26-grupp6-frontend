@@ -24,3 +24,7 @@ export function getResource(id) {
 export function getBookingsByResource(id) {
   return requestGet(`/api/bookings/resource/${id}`)
 }
+
+export function getAvailability(id, date) {
+  return requestGet(`/api/resources/${id}/availability?date=${date}`)
+}
