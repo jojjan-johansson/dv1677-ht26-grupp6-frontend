@@ -306,15 +306,15 @@ export default function Recource() {
       <h2>{resource.name}</h2>
 
       <div className="resource-meta">
-        <p>Provider: {resource.provider}</p>
-        <p>{resource.active ? (<p>Aktiv</p>) : (<p>Oaktiv</p>)}</p>
-        <p>Kapacitet:</p>
-        <p>vcpus: {resource.capacity.vcpus}</p>
-        <p>ramMb: {resource.capacity.ramMb}</p>
-        {resource.provider === "proxmox" && (
-          <p>vcpus: {resource.capacity.vcpus}</p>
-        )}
-      </div>
+          <p>Provider: {resource.provider}</p>
+          <p>{resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+          <p>Kapacitet:</p>
+          <p>vcpus: {String(resource.capacity.vcpus) ?? "Ej angivet"}</p>
+          <p>ramMb: {String(resource.capacity.ramMb) ?? "Ej angivet"}</p>
+          {resource.provider === "proxmox" && (
+            <p>diskGb: {String(resource.capacity.diskGb) ?? "Ej angivet"}</p>
+          )}
+        </div>
 
       {error && (
         <p role="alert">{error}</p>
