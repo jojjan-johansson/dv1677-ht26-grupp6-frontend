@@ -42,9 +42,14 @@ export default function Homepage() {
           <h3>{resource.name}</h3>
 
           <div className="resource-meta">
-            <p>Typ: {resource.type}</p>
-            <p>{resource.description}</p>
-            <p>Kapacitet: {resource.capacity}</p>
+            <p>Provider: {resource.provider}</p>
+            <p>{resource.active ? (<p>Aktiv</p>) : (<p>Oaktiv</p>)}</p>
+            <p>Kapacitet:</p>
+            <p>vcpus: {resource.capacity.vcpus}</p>
+            <p>ramMb: {resource.capacity.ramMb}</p>
+            {resource.provider === "proxmox" && (
+              <p>vcpus: {resource.capacity.vcpus}</p>
+            )}
           </div>
 
           <button

@@ -302,14 +302,19 @@ export default function Recource() {
       >
         ← Tillbaka till resurser
       </button>
-
+      
       <h2>{resource.name}</h2>
 
-      <p>
-        {resource.type} — {resource.description}
-      </p>
-
-      <p>Kapacitet: {resource.capacity}</p>
+      <div className="resource-meta">
+        <p>Provider: {resource.provider}</p>
+        <p>{resource.active ? (<p>Aktiv</p>) : (<p>Oaktiv</p>)}</p>
+        <p>Kapacitet:</p>
+        <p>vcpus: {resource.capacity.vcpus}</p>
+        <p>ramMb: {resource.capacity.ramMb}</p>
+        {resource.provider === "proxmox" && (
+          <p>vcpus: {resource.capacity.vcpus}</p>
+        )}
+      </div>
 
       {error && (
         <p role="alert">{error}</p>
