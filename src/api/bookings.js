@@ -16,6 +16,12 @@ export async function getBooking(token, id) {
   return res.json()
 }
 
+export async function getBookingsByResource(token, id) {
+  const res = await fetch(`${BASE_URL}/api/bookings/resource/${id}`, { headers: authHeader(token) })
+  if (!res.ok) throw new Error('Failed to fetch booking')
+  return res.json()
+}
+
 export async function createBooking(token, body) {
   const res = await fetch(`${BASE_URL}/api/bookings`, {
     method: 'POST',

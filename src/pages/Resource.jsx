@@ -6,6 +6,7 @@ import { io } from "socket.io-client";
 import { getResource } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
 import {
+  getBookingsByResource,
   createBooking,
   cancelBooking,
   editBooking
@@ -35,27 +36,13 @@ export default function Recource() {
   const [error, setError] = useState("");
 
   const loadBookings = useCallback(async () => {
-    if (!token || !resourceId) return;
-
-    const baseUrl = import.meta.env.VITE_API_URL || "";
-
-    const response = await fetch(
-      `${baseUrl}/api/bookings/resource/${resourceId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Kunde inte hämta resursens bokningar.");
-    }
-
-    const data = await response.json();
-
-    setBookings(Array.isArray(data) ? data : []);
-  }, [token, resourceId]);
+      if (!token || !resourceId) return
+      const b = await getBookingsByResource(token, resourceId)
+      setBookings(b)
+      console.log(b
+        
+      )
+    }, [token, resourceId])
 
   // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
