@@ -23,7 +23,7 @@ export default function Homepage() {
   useEffect(() => {
     getResources()
           .then(setResources)
-          .catch(setError)
+          .catch((err) => setError(err.message))
           .finally(() => setLoading(false))
   }, [])
 
