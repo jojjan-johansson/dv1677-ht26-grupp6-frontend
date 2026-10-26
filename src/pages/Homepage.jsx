@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResources } from "../api";
+import { getResources } from "../api/resources.js";
 
 export default function Homepage() {
   const [resources, setResources] = useState([])
@@ -9,10 +9,11 @@ export default function Homepage() {
   window.sessionStorage.clear();
 
   const navigate = useNavigate();
+  
 
-  const addNewResource = () => {
-    // navigate(`/resources/new`, { replace: true });
-  }
+  // const addNewResource = () => {
+  //   navigate(`/resources/new`, { replace: true });
+  // }
 
   const resourceHandle = (id) => {
     window.sessionStorage.setItem("resource_id", id);
@@ -22,7 +23,7 @@ export default function Homepage() {
   useEffect(() => {
     getResources()
           .then(setResources)
-          .catch(setError)
+          .catch((err) => setError(err.message))
           .finally(() => setLoading(false))
   }, [])
 
@@ -30,9 +31,9 @@ export default function Homepage() {
     <main className="main" id="main">
       <h2>Resurser</h2>
 
-      <button onClick={addNewResource} className="btn">
+      {/* <button onClick={addNewResource} className="btn">
         Lägg till resurs
-      </button>
+      </button> */}
 
       {error && <p>{error}</p>}
 
@@ -41,9 +42,14 @@ export default function Homepage() {
           <h3>{resource.name}</h3>
 
           <div className="resource-meta">
-            <p>Typ: {resource.type}</p>
-            <p>{resource.description}</p>
-            <p>Kapacitet: {resource.capacity}</p>
+            <p>Provider: {resource.provider}</p>
+            <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+            <p>Kapacitet:</p>
+            <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+            <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
+            {resource.provider === "proxmox" && (
+              <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
+            )}
           </div>
 
           <button

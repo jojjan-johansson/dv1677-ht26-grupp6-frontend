@@ -294,18 +294,132 @@ main {
     margin-bottom: 1.4rem;
 }
 
+.new_booking_card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 1rem;
+}
+
+.new_booking_card label {
+  display: block;
+}
+
+.new_booking_card input {
+  margin-bottom: 15px;
+}
+
+.new_booking_card select {
+  width: 60%;
+  padding: 10px;
+}
+
+.timeslots {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 1rem;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.slot {
+  padding: 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.slot.available { background: #dcfce7; color: #166534; }
+.slot.available:hover { border-color: #16a34a; }
+.slot.booked { background: #fee2e2; color: #991b1b; cursor: not-allowed; }
+.slot.selected { border-color: #2563eb; background: #dbeafe; color: #1e40af; }
+
+.blue {
+  background-color: rgb(81, 81, 249);
+}
+
 .btn:hover {
-    background-color: #27AE34;
+  background-color: #27AE34;
+}
+
+.blue:hover {
+  background-color: rgb(61, 61, 190);
+}
+
+.booking_card {
+  padding: 10px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.139);
+  margin-bottom: 1rem;
+}
+
+.main_label {
+  font-size: large;
+  margin-bottom: 20px;
+}
+
+.wants {
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 1rem;
+}
+
+.wants label {
+  display: block;
+}
+
+.wants input {
+  width: 10em;
+  padding: 12px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.nav {
+  background-color: #A1DFA8;
+  padding: 5px opx;
+}
+
+.navChoice {
+  border: none;
+  padding: 5px;
+  margin: 0px 5px;
+  background: #A1DFA8;
+}
+
+.navChoice:hover {
+  background-color: #27AE34;
+  color: #fff;
 }
 
 .resource-form,
-.booking-form {
+.booking-form,
+.login-form {
     display: flex;
     flex-direction: column;
 }
 
+.resource-meta p {
+  margin-bottom: 0.5rem;
+}
+
+
 input,
-textarea {
+textarea,
+select {
     margin-bottom: 1.4rem;
     font-size: 1rem;
     padding: 0.8rem;

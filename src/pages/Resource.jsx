@@ -1,63 +1,211 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getResource, getBookingsByResource, getUsers, addBooking, deleteBookings } from "../api";
+import { io } from "socket.io-client";
+
+import { getResource, getAvailability } from "../api/resources.js";
+import { getUsers } from "../api/users.js";
+import {
+  getBookingsByResource,
+  createBooking,
+  cancelBooking,
+  editBooking
+} from "../api/bookings.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Recource() {
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
+
+  const resourceId = window.sessionStorage.getItem("resource_id");
+
   const [resource, setResource] = useState({});
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookedBy, setBookedBy] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null)
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [date, setDate] = useState(
+    new Date().toLocaleDateString("sv-SE")
+  );
+  const [vcpus, setVcpus] = useState(1);
+  const [ramMb, setRamMb] = useState(1024);
+  const [diskGb, setDiskGb] = useState(1);
   const [error, setError] = useState("");
 
+  const loadBookings = useCallback(async () => {
+    if (!token || !resourceId) return
+    const b = await getBookingsByResource(token, resourceId)
+    setBookings(b)
+  }, [token, resourceId])
 
-  const resourceId = window.sessionStorage.getItem("resource_id");
-  const navigate = useNavigate();
+  
+  const loadAvailability = useCallback(async () => {
+    if (!resourceId) return
+    const s = await getAvailability(resourceId, date)
+    setSlots(s)
+    setSelectedSlot(null)
 
-  const loadBookings = () => {
+  }, [resourceId, date])
 
-    return getBookingsByResource(resourceId)
-            .then(setBookings)
-            .catch(setError)
-            .finally(() => setLoading(false))
-  };
-
+  // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
-    getResource(resourceId)
-      .then(setResource)
-      .catch(setError)
-          .finally(() => setLoading(false))
+    if (!token || !resourceId) return;
 
-    loadBookings().catch((error) => {
-      setError(error.message);
+    const socketUrl =
+      import.meta.env.VITE_API_URL || window.location.origin;
+
+    const socket = io(socketUrl);
+
+    const handleBookingChange = () => {
+      loadBookings().catch((err) => {
+        console.error("Socket.io bokningsuppdatering:", err);
+        setError(err.message);
+      });
+    };
+
+    socket.on("connect", () => {
+      console.log("Socket.io ansluten:", socket.id);
+      socket.emit("join", `resource:${resourceId}`);
+      handleBookingChange();
     });
 
-    getUsers()
-      .then((data) => {
-        setUsers(data);
+    socket.on("connect_error", (err) => {
+      console.error("Socket.io anslutningsfel:", err.message);
+    });
 
-        if (data.length > 0) {
-          setBookedBy(data[0]._id);
+    socket.on("booking:created", handleBookingChange);
+    socket.on("booking:updated", handleBookingChange);
+    socket.on("booking:canceled", handleBookingChange);
+    socket.on("booking:deleted", handleBookingChange);
+
+    return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("booking:created", handleBookingChange);
+      socket.off("booking:updated", handleBookingChange);
+      socket.off("booking:canceled", handleBookingChange);
+      socket.off("booking:deleted", handleBookingChange);
+      socket.disconnect();
+    };
+  }, [token, resourceId, loadBookings]);
+
+  useEffect(() => {
+    if (!resourceId) return;
+
+    loadAvailability().catch((err) => {
+      setError(err.message);
+    });
+  }, [resourceId, loadAvailability]);
+
+  // Hämta resurs, användare och bokningar.
+  useEffect(() => {
+    if (!resourceId) {
+      setError("Ingen resurs har valts.");
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const initialize = async () => {
+      setLoading(true);
+
+      try {
+        const resourceData = await getResource(resourceId);
+
+        if (active) {
+          setResource(resourceData);
         }
-      })
-      .catch(setError)
-      .finally(() => setLoading(false))
-  }, []);
+
+        await loadBookings().catch((err) => {
+          setError(err.message);
+        });
+
+        if (user?.role === "admin") {
+          const userData = await getUsers();
+
+          if (active) {
+            setUsers(userData);
+            setBookedBy(userData[0]?._id || "");
+          }
+        } else if (active && user?._id) {
+          setBookedBy(user._id);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    resourceId,
+    loadBookings,
+    user?._id,
+    user?.role
+  ]);
 
   const getUserEmail = (userId) => {
-    const user = users.find((user) => user._id === userId);
-    return user ? user.email : userId;
+    const id =
+      typeof userId === "object"
+        ? userId?._id
+        : userId;
+
+    const foundUser = users.find(
+      (item) => item._id === id
+    );
+
+    if (foundUser) return foundUser.email;
+
+    if (user?._id === id) {
+      return user.email || id;
+    }
+
+    return id || "Okänd användare";
   };
 
-  const createBooking = async (event) => {
+  const formattedTime = (startTimeValue, endTimeValue) => {
+    const start = new Date(startTimeValue);
+    const end = new Date(endTimeValue);
+
+    return `${start.toLocaleString("sv-SE", {
+      dateStyle: "short",
+      timeStyle: "short"
+    })} – ${end.toLocaleString("sv-SE", {
+      dateStyle: "short",
+      timeStyle: "short"
+    })}`;
+  };
+
+  const timeInPast = (startTime) => {
+    console.log(startTime)
+    const start = new Date(startTime).getTime();
+    const currentTime = Date.now();
+
+    return start <= currentTime;
+  }
+
+  // Skapa bokning med Beckas broker-behov.
+  const createABooking = async (event) => {
     event.preventDefault();
     setError("");
-    setLoading(true)
 
     if (!bookedBy || !startTime || !endTime) {
-      setError("Fyll i alla fält.");
+      setError("Fyll i alla obligatoriska fält.");
       return;
     }
 
@@ -66,47 +214,88 @@ export default function Recource() {
       return;
     }
 
+    setSaving(true);
+
     try {
+      let want = {};
+
+      if (resource.provider === "proxmox") {
+        want = {
+          vcpus: Number(vcpus),
+          ramMb: Number(ramMb),
+          diskGb: Number(diskGb)
+        };
+      } else if (resource.provider === "openstack") {
+        want = {
+          vcpus: Number(vcpus),
+          ramMb: Number(ramMb)
+        };
+      }
 
       const data = {
-          resource_id: resourceId,
-          booked_by: bookedBy,
-          start_time: startTime,
-          end_time: endTime
-        }
-      const response = await addBooking(data)
+        resource_id: resourceId,
+        booked_by: bookedBy,
+        start_time: startTime,
+        end_time: endTime,
+        want
+      };
 
-      if (!response.ok) {
-        throw new Error("Kunde inte skapa bokningen");
-      }
+      await createBooking(token, data);
 
       setStartTime("");
       setEndTime("");
+      setVcpus(1);
+      setRamMb(1024);
+      setDiskGb(1);
 
       await loadBookings();
-    } catch (error) {
-      setError(error.message);
+      await loadAvailability();
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setSaving(false);
     }
   };
 
-  const deleteBooking = async (bookingId) => {
+  // Avboka bokning.
+  const cancelTheBooking = async (bookingId) => {
     setError("");
-    setLoading(true)
+    setSaving(true);
 
     try {
-      const response = await deleteBookings(bookingId)
+      await cancelBooking(token, bookingId);
+      await loadBookings();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      if (!response.ok) {
-        throw new Error("Kunde inte ta bort bokningen");
+  // Förläng bokningen med en timme.
+  const editTheBooking = async (booking) => {
+    setError("");
+    setSaving(true);
+
+    try {
+      const newEndTime = new Date(booking.end_time);
+
+      if (Number.isNaN(newEndTime.getTime())) {
+        throw new Error("Bokningens sluttid är ogiltig.");
       }
 
+      newEndTime.setHours(newEndTime.getHours() + 1);
+
+      await editBooking(token, booking._id, {
+        resource_id: resourceId,
+        end_time: newEndTime.toISOString()
+      });
+
       await loadBookings();
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setSaving(false);
     }
   };
 
@@ -114,7 +303,9 @@ export default function Recource() {
     navigate("/");
   };
 
-  if (loading) return <p>Laddar..</p>
+  if (loading) {
+    return <p>Laddar...</p>;
+  }
 
   return (
     <main className="main" id="main">
@@ -126,87 +317,256 @@ export default function Recource() {
         ← Tillbaka till resurser
       </button>
 
+      <div className="booking_card">
       <h2>{resource.name}</h2>
 
-      <p>
-        {resource.type} — {resource.description}
-      </p>
+      <div className="resource-meta">
+        <p>Provider: {resource.provider}</p>
+        <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+        <p>Kapacitet:</p>
+        <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+        <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
+        {resource.provider === "proxmox" && (
+          <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
+        )}
+      </div>
+      </div>
 
-      <p>Kapacitet: {resource.capacity}</p>
+      {error && (
+        <p role="alert">{error}</p>
+      )}
 
-      {error && <p>{error}</p>}
-      
+      <div className="booking_card">
 
       <h3>Bokningar</h3>
 
       {bookings.length > 0 ? (
-        bookings.map((booking) => (
-          <div key={booking._id} className="booking-card">
-            <p>
-              <strong>{getUserEmail(booking.booked_by)}</strong>
-            </p>
+        bookings.map((booking) => {
+          const ownerId =
+            typeof booking.booked_by === "object"
+              ? booking.booked_by?._id
+              : booking.booked_by;
 
-            <p>
-              {booking.start_time} - {booking.end_time}
-            </p>
+          const canManage =
+            user?.role === "admin" ||
+            String(ownerId) === String(user?._id);
 
-            <p className="status">{booking.status}</p>
+          const isActive =
+            booking.status !== "canceled" &&
+            booking.status !== "cancelled";
 
-            <button
-              type="button"
-              className="btn"
-              onClick={() => deleteBooking(booking._id)}
+          return (
+            <div
+              key={booking._id}
+              className="booking-card"
             >
-              Ta bort bokning
-            </button>
-          </div>
-        ))
+              <p>
+                Bokad av: {getUserEmail(booking.booked_by)}
+              </p>
+
+              <p>
+                {formattedTime(
+                  booking.start_time,
+                  booking.end_time
+                )}
+              </p>
+
+              <p className="status">
+                {booking.status}
+              </p>
+
+              {canManage && isActive && (
+                <>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={saving}
+                    onClick={() =>
+                      cancelTheBooking(booking._id)
+                    }
+                  >
+                    Avboka
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={saving}
+                    onClick={() =>
+                      editTheBooking(booking)
+                    }
+                  >
+                    Förläng din bokning med 1 timme
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })
       ) : (
         <p>Inga bokningar för denna resurs.</p>
       )}
+      </div>
+
+
+      <div className="booking_card">
 
       <h3>Ny bokning</h3>
 
-      <form className="booking-form" onSubmit={createBooking}>
-        <label htmlFor="booked_by">Användare</label>
+      <form
+        className="booking-form"
+        onSubmit={createABooking}
+      >
+        {user?.role === "admin" && (
+          <>
+            <div className="new_booking_card">           
+            <label htmlFor="booked_by" className="main_label">
+              Användare
+            </label>
 
-        <select
-          id="booked_by"
-          value={bookedBy}
-          onChange={(event) => setBookedBy(event.target.value)}
-          required
+            <select
+              id="booked_by"
+              value={bookedBy}
+              onChange={(event) =>
+                setBookedBy(event.target.value)
+              }
+              required
+            >
+              {users.map((item) => (
+                <option
+                  key={item._id}
+                  value={item._id}
+                >
+                  {item.email}
+                </option>
+              ))}
+            </select>
+             </div>
+          </>
+        )}
+
+        <div className="new_booking_card">
+          <label htmlFor="date" className="main_label">
+            Dag
+          </label>
+
+          <input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(event) =>
+              setDate(event.target.value)
+            }
+          />
+        </div>
+
+        <div className="timeslots">
+          <label className="main_label">Tillgängliga tider</label>
+          <div className="slot-grid">
+          {slots.map(slot => {
+            if (timeInPast(slot.startsAt)){
+              return(null)
+            } else {
+              const hour = new Date(slot.startsAt).getHours()
+
+              const isSelected = selectedSlot?.startsAt === slot.startsAt
+              return (
+                <div
+                key={slot.startsAt} className={`slot ${!slot.available ? 'booked' : isSelected ? 'selected' : 'available'}`}
+                onClick={() => {
+                if (!slot.available) return;
+
+                if (isSelected) {
+                  setSelectedSlot(null);
+                  setStartTime("");
+                  setEndTime("");
+                } else {
+                  setSelectedSlot(slot);
+                  setStartTime(slot.startsAt);
+                  setEndTime(slot.endsAt);
+                }
+              }}
+                >
+                  {hour}:00 – {hour + 1}:00
+                </div>
+              )
+            }
+            
+          })}
+          </div>
+        </div>
+
+        {(resource.provider === "openstack" ||
+          resource.provider === "proxmox") && (
+          <div>
+            <div className="wants">
+              <label className="main_label">Behov</label>
+
+              <label htmlFor="vcpus">
+                vCPUs
+              </label>
+
+              <input
+                id="vcpus"
+                type="number"
+                value={vcpus}
+                min="1"
+                max="5"
+                onChange={(event) =>
+                  setVcpus(Number(event.target.value))
+                }
+                required
+              />
+
+              <label htmlFor="ramMb">
+                RAM (MB)
+              </label>
+
+              <input
+                id="ramMb"
+                type="number"
+                value={ramMb}
+                min="1024"
+                max="4096"
+                step="1024"
+                onChange={(event) =>
+                  setRamMb(Number(event.target.value))
+                }
+                required
+              />
+
+              {resource.provider === "proxmox" && (
+                <>
+                  <label htmlFor="diskGb">
+                    Disk (GB)
+                  </label>
+
+                  <input
+                    id="diskGb"
+                    type="number"
+                    value={diskGb}
+                    min="1"
+                    max="5"
+                    onChange={(event) =>
+                      setDiskGb(Number(event.target.value))
+                    }
+                    required
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn"
+          disabled={saving}
         >
-          {users.map((user) => (
-            <option key={user._id} value={user._id}>
-              {user.email}
-            </option>
-          ))}
-        </select>
-
-        <label htmlFor="start_time">Starttid</label>
-
-        <input
-          id="start_time"
-          type="datetime-local"
-          value={startTime}
-          onChange={(event) => setStartTime(event.target.value)}
-          required
-        />
-
-        <label htmlFor="end_time">Sluttid</label>
-
-        <input
-          id="end_time"
-          type="datetime-local"
-          value={endTime}
-          onChange={(event) => setEndTime(event.target.value)}
-          required
-        />
-
-        <button type="submit" className="btn">
-          Boka
+          {saving ? "Sparar..." : "Boka"}
         </button>
       </form>
+      </div>
     </main>
   );
 }

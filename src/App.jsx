@@ -1,88 +1,101 @@
 import { useEffect, useState } from 'react'
+// import { useNavigate } from "react-router-dom";
 import './css/App.css'
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 
 import Header from './pages/Header';
 import Footer from './pages/Footer';
 
 import Homepage from './pages/Homepage';
 import Recource from './pages/Resource';
+import Login from './pages/Login';
+import RegisterPage from './pages/Register';
+
+function ProtectedRoute({ children }) {
+  const { token } = useAuth()
+  return token ? children : <Navigate to="/login" />
+}
+
+function Nav() {
+  const navigate = useNavigate();
+
+  const navigateLink = (link) => {
+    navigate(link, { replace: true });
+  }
+
+  const { user, logout } = useAuth()
+  return (
+    <nav className='nav'>
+      <button
+        type="button"
+        className="navChoice"
+        onClick={() => navigateLink("/")}
+      >Resurser</button>
+      {user ? (
+        <>
+          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{user.email}</span>
+          <button className="navChoice" onClick={logout}>Logga ut</button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="navChoice"
+            onClick={() => navigateLink("/login")}
+          >Logga in</button>
+          <button
+            type="button"
+            className="navChoice"
+            onClick={() => navigateLink("/register")}
+          >Registrera</button>
+        </>
+      )}
+    </nav>
+  )
+}
 
 export default function App() {
-
+  
 
   return (
+    <AuthProvider>
     <BrowserRouter basename="/dv1677-ht26-grupp6-frontend">
       {/* <Layout> */}
         <Header />
-          {/* Routes */}
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <Homepage />
-              }
-            />
-            <Route
-              path="/resource"
-              element={
-                <Recource />
-              }
-            />
-            {/* <Route
-              path="/finished"
-              element={
-                <Finished />
-              }
-            /> */}
-          </Routes>
+            <Nav />
+            {/* Routes */}
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <Homepage />
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <Login />
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <RegisterPage />
+                }
+              />
+              <Route
+                path="/resource"
+                element={
+                  <ProtectedRoute>
+                    <Recource />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
         <Footer />
       {/* </Layout> */}
     </BrowserRouter>
+    </AuthProvider>
   );
 }
-
-// function App() {
-//   const [resources, setResources] = useState([])
-//   const [error, setError] = useState('')
-
-//   useEffect(() => {
-//     const apiUrl = import.meta.env.VITE_API_URL
-
-//     fetch(`${apiUrl}/api/resources`)
-//       .then((response) => {
-//         if (!response.ok) {
-//           throw new Error('Kunde inte hämta resurser')
-//         }
-
-//         return response.json()
-//       })
-//       .then((data) => {
-//         setResources(data)
-//       })
-//       .catch((error) => {
-//         setError(error.message)
-//       })
-//   }, [])
-
-//   return (
-//     <main>
-//       <h1>Proxmox Booking</h1>
-
-//       <h2>Tillgängliga resurser</h2>
-
-//       {error && <p>{error}</p>}
-
-//       {resources.map((resource) => (
-//         <div key={resource._id}>
-//           <h3>{resource.name}</h3>
-//           <p>Typ: {resource.type}</p>
-//           <p>{resource.description}</p>
-//           <p>Kapacitet: {resource.capacity}</p>
-//         </div>
-//       ))}
-//     </main>
-//   )
-// }
-
-// export default App
