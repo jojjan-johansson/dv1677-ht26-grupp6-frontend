@@ -6,7 +6,7 @@ import { io } from "socket.io-client";
 import { getResource, getAvailability } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
 import {
-  getBookings,
+  getBookingsByResource,
   createBooking,
   cancelBooking,
   editBooking
@@ -37,20 +37,20 @@ export default function Recource() {
   const [diskGb, setDiskGb] = useState(1);
   const [error, setError] = useState("");
 
-   const loadBookings = useCallback(async () => {
+  const loadBookings = useCallback(async () => {
     if (!token || !resourceId) return
-    const b = await getBookings(token)
-    setBookings(b.filter(bookings => bookings.resource_id === resourceId || bookings.resource_id?._id === resourceId))
+    const b = await getBookingsByResource(token, resourceId)
+    setBookings(b)
   }, [token, resourceId])
 
   
   const loadAvailability = useCallback(async () => {
-    if (!token) return
+    if (!resourceId) return
     const s = await getAvailability(resourceId, date)
     setSlots(s)
     setSelectedSlot(null)
 
-  }, [token, resourceId, date])
+  }, [resourceId, date])
 
   // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
@@ -94,6 +94,14 @@ export default function Recource() {
     };
   }, [token, resourceId, loadBookings]);
 
+  useEffect(() => {
+    if (!resourceId) return;
+
+    loadAvailability().catch((err) => {
+      setError(err.message);
+    });
+  }, [resourceId, loadAvailability]);
+
   // Hämta resurs, användare och bokningar.
   useEffect(() => {
     if (!resourceId) {
@@ -114,8 +122,9 @@ export default function Recource() {
           setResource(resourceData);
         }
 
-        await loadBookings();
-        await loadAvailability();
+        await loadBookings().catch((err) => {
+          setError(err.message);
+        });
 
         if (user?.role === "admin") {
           const userData = await getUsers();
@@ -146,7 +155,6 @@ export default function Recource() {
   }, [
     resourceId,
     loadBookings,
-    loadAvailability,
     user?._id,
     user?.role
   ]);
@@ -184,8 +192,9 @@ export default function Recource() {
   };
 
   const timeInPast = (startTime) => {
+    console.log(startTime)
     const start = new Date(startTime).getTime();
-    const currentTime = new Date();
+    const currentTime = Date.now();
 
     return start <= currentTime;
   }
@@ -308,17 +317,26 @@ export default function Recource() {
         ← Tillbaka till resurser
       </button>
 
+      <div className="booking_card">
       <h2>{resource.name}</h2>
 
-      <p>
-        {resource.type} — {resource.description}
-      </p>
-
-      <p>Kapacitet: {resource.capacity}</p>
+      <div className="resource-meta">
+        <p>Provider: {resource.provider}</p>
+        <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+        <p>Kapacitet:</p>
+        <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+        <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
+        {resource.provider === "proxmox" && (
+          <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
+        )}
+      </div>
+      </div>
 
       {error && (
         <p role="alert">{error}</p>
       )}
+
+      <div className="booking_card">
 
       <h3>Bokningar</h3>
 
@@ -388,6 +406,10 @@ export default function Recource() {
       ) : (
         <p>Inga bokningar för denna resurs.</p>
       )}
+      </div>
+
+
+      <div className="booking_card">
 
       <h3>Ny bokning</h3>
 
@@ -397,7 +419,8 @@ export default function Recource() {
       >
         {user?.role === "admin" && (
           <>
-            <label htmlFor="booked_by">
+            <div className="new_booking_card">           
+            <label htmlFor="booked_by" className="main_label">
               Användare
             </label>
 
@@ -418,11 +441,12 @@ export default function Recource() {
                 </option>
               ))}
             </select>
+             </div>
           </>
         )}
 
-        <div className="date">
-          <label htmlFor="date">
+        <div className="new_booking_card">
+          <label htmlFor="date" className="main_label">
             Dag
           </label>
 
@@ -437,13 +461,13 @@ export default function Recource() {
         </div>
 
         <div className="timeslots">
-          <label>Tillgängliga tider</label>
+          <label className="main_label">Tillgängliga tider</label>
           <div className="slot-grid">
           {slots.map(slot => {
             if (timeInPast(slot.startsAt)){
               return(null)
             } else {
-              const hour = new Date(slot.startsAt).getUTCHours()
+              const hour = new Date(slot.startsAt).getHours()
 
               const isSelected = selectedSlot?.startsAt === slot.startsAt
               return (
@@ -475,9 +499,9 @@ export default function Recource() {
         {(resource.provider === "openstack" ||
           resource.provider === "proxmox") && (
           <div>
-            <label>Behov</label>
-
             <div className="wants">
+              <label className="main_label">Behov</label>
+
               <label htmlFor="vcpus">
                 vCPUs
               </label>
@@ -542,6 +566,7 @@ export default function Recource() {
           {saving ? "Sparar..." : "Boka"}
         </button>
       </form>
+      </div>
     </main>
   );
 }
