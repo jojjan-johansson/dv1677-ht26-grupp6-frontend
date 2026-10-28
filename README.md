@@ -117,3 +117,40 @@ Funktionen:
 Resultat i devtools (ger error 401):
 ![image](public/noAuthSite.png)
 
+
+## Krav 4 - Bokningssystem: bokningslogik
+
+### I Backend
+
+Vi har skapat en fil, overlap.js, med två funktioner. En som heter intervalsOverlap och kollar att två bokningar inte är överlappar varandra, overlap villkoret ser ut såhär:
+
+> ```a.start_time < b.end_time && b.start_time < a.end_time```
+
+Den andra heter findConflicts och kollar i databasen att det inte redan finns en bokning på den nya bokningens tider.
+
+Vi har även skapat en fil, policy.js, som har en funktion som heter controlBookingPolicy. Den tar en bokning och kollar tre saker; 1: att bokningen inte är mer än fyra timmar, 2: att bokningen inte startar i dåtiden, 3: att användaren inte har mer än 3 bokningar. Detta så att det inte blir för mycket eller för långa onödiga bokningar.
+
+I getBooking och editBooking routesen så används findConflicts och controlBookingPolicy funktionerna innan bokningen bokas av brokern och läggs in i databasen för att se att bokningen inte bryter mot några av dessa policys eller skapar en konflikt. Om bokningen skulle bryta mot en policy eller skapa en konflikt så avbryts routen med statuskoden 409 eftersom API anropet fungerade bra men att bokningen inte gick igenom på grund av konflikter med existerande bokningar eller policyn. Statuskoden 409 passar därför bra enligt [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/409):
+
+>"The HTTP 409 Conflict client error response status code indicates a request conflict with the current state of the target resource."
+
+Vi har skapat en till fil, availability.js, som kollar alla en angiven dags lediga tider från databasen på en angiven resurs och skickar tillbaka lediga tid-slotter i en timmes intervaller. Funktionen tar starttiden 8:00 och sluttiden 18:00 (öppettiderna) och hämtar alla bekräftade bokningar för den dagen. Sedan skapar den alla tid-slotter som får plats mellan öppettiderna och slutligen jämförs slotsen med bokningarna med hjälp av intervalsOverlap funktionen från overlap.js. De slotsen får available: true om de är lediga och available: false annars.
+Denna funktion används i en route som tar emot resource id och date och skickar tillbaka de lediga slotsen, getAvailability.
+
+**Filer som har lagts till / ändrats:**
+
+- domian/availability.js
+- domian/overlap.js
+- domian/policy.js
+- routes/booking.js
+- routes/resources.js
+
+
+## I Frontend
+
+Vi har lagt in en ny API funktion som anropar getAvailability från backend. I Resource.jsx så hämtas dagens datum som tillsammans med den aktuella resursens id skickas med i ett anrop till getAvailability funktionen. Svaret med slots sparas i en variabel som använss i formuläret för att boka en ny tid. För varje slot så kollas först att början på slot-tiden inte har passerat i nuvarande tid och sedan skapad en div i ett rutnät med start och slut tid. Datan available kollas på sloten och om den är true så blir diven klickbar och om användaren väljer denna tid så sparas start och slut tiden från sloten som skickas med som bokningens start och slut tid. Om användaren väljer ett annat datum så laddas slotsen om med det nya datumet.
+
+**Filer som har lagts till / ändrats:**
+
+- src/api/resources.js
+- src/pages/Resources.jsx

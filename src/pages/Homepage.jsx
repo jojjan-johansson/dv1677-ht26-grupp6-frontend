@@ -9,11 +9,6 @@ export default function Homepage() {
   window.sessionStorage.clear();
 
   const navigate = useNavigate();
-  
-
-  // const addNewResource = () => {
-  //   navigate(`/resources/new`, { replace: true });
-  // }
 
   const resourceHandle = (id) => {
     window.sessionStorage.setItem("resource_id", id);
@@ -30,10 +25,6 @@ export default function Homepage() {
   return (
     <main className="main" id="main">
       <h2>Resurser</h2>
-
-      {/* <button onClick={addNewResource} className="btn">
-        Lägg till resurs
-      </button> */}
 
       {error && <p>{error}</p>}
 

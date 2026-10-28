@@ -192,7 +192,6 @@ export default function Recource() {
   };
 
   const timeInPast = (startTime) => {
-    console.log(startTime)
     const start = new Date(startTime).getTime();
     const currentTime = Date.now();
 
@@ -237,7 +236,7 @@ export default function Recource() {
         booked_by: bookedBy,
         start_time: startTime,
         end_time: endTime,
-        want
+        want: want
       };
 
       await createBooking(token, data);
