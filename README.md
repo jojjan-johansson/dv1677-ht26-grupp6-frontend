@@ -51,7 +51,7 @@ Dokumentera löpande vad ni gjort och hur ni löst problem.
 
 
 
-## Krav 1
+## Krav 1 - JWT-autentisering
 
 ### I backend:
 
@@ -61,7 +61,9 @@ Vi har lagt till routes för att logga in och registrera sig där de tar emot em
 
 Vi har gjort en middleware som vi använder i booking routsen för att verifiera att den som anropar routsen är inloggad, samt inloggad som admin. Middlewaren har två funktioner, en som kollar att användaren är autentiserad, requireAuth, och en som kollar om användaren är admin, requireAdmin. requireAuth kollar först att headern på API-anropet är korrekt genom att kolla om den börjar med 'Bearer ' som den borde om den har en token med sig. Om det stämmer så tar den ut token från headern och med hjälp av jwt så verifieras token mot JWT_SECRET. Med hjälp av svaret från verifieringen så hämtas den aktuella användaren och kollar att användaren finns i databas. Om allt är okej så höjs inga varningar och routen som funktioner används i kan fungera som vanligt. requireAdmin kollar om användaren har rollen admin, om inte så höjs en varning annars så kan routen som funktioner används i kan fungera som vanligt.
 
-Vi valde att alla användare kan se översikten över resurserna men behöver logga in för att se och hantera bokningar. Vi bestämde även att endast admin kan ta bort bokningar,  övriga användare kan endast avboka dem, och admin kan även se och hantare allas boknigar medans övriga användare endast kan hatera sina egna.
+Vi valde att alla användare kan se översikten över resurserna men behöver logga in för att se och hantera bokningar. Vi bestämde även att endast admin kan avboka bokningar, övriga användare kan endast förlänga bokningne med en timme, och admin kan även se och hantare allas boknigar medans övriga användare endast kan hatera sina egna.
+
+Vi valde även att man måste vara en inloggad användare för all hantering av kommentarer.
 
 
 **Routes som kröver autentisering:**
@@ -70,9 +72,17 @@ Vi valde att alla användare kan se översikten över resurserna men behöver lo
 - GET /bookings/resource/:id
 - GET /bookings/:id
 - POST /bookings
-- POST /bookings/:id
+- PUT /bookings/:id
 - DELETE /booking/cancel/:id
-- DELETE /booking/delete/:id (endast admin)
+
+- GET /comments
+- GET /comments/booking/:id
+- GET /comments/user/:id
+- GET /comments/:id
+- POST /comments
+- PUT /comments/:id
+- DELETE /comments/:id
+
 
 **Filer som har lagts till / ändrats:**
 
@@ -80,9 +90,9 @@ Vi valde att alla användare kan se översikten över resurserna men behöver lo
 - middleware/auth.js
 - routes/auth.js
 - routes/bookings.js
+- routes/comments.js
 - .env
 - .env.example
-- 
 
 ### I frontend:
 
@@ -91,9 +101,9 @@ Vi har lagt till en login sida och en registrera sida där användaren kan logga
 Vi har lagt till en AuthContext.jsx med två funktioner, en för att logga in och en för att logga ut genom att lägga till username och token i localstorage respektive rensa dessa. Funktionerna, user och token läggs till i en kontext som används i pages för att enkelt kunna logga in och ut.
 Vi har skapat ett auth api med en login funktion som skickar user och lösenord till backends login route med fetch och en funktion som gör motsvarande för att registrera ny användare.
 
-Vi har uppdaterat booking api så att det skickas med en token i headern så att endast inloggade användare kan se, lägga till, ändra och avboka bokningar. Endast admin kan ta bort bokningar.
+Vi har uppdaterat booking api så att det skickas med en token i headern så att endast inloggade användare kan se, lägga till, och ändra. Vi har valt att göra så att endast admin kan avboka bokningar eftersom att i ett sånt här typ av program brukar användare inte kunna avboka utan behöva skicka en försfrågan till admin för att avboka, i denna tidsramen hann vi inte lägga till den funktionen men ville ändå ha en route som endast admin kan använda.
 
-Vi har uppdaterat resource page för att använda korrekta api:er, lägga till avboka, ta bort och ändra bokning funktioner och se till att endast inloggade användare kan komma in på detaljvyn över varje resurs och dess bokningar och att endast admin kan se allas bokningar (övriga användare ser endast sina egna). Vi har även lagt till en EditBocking page för att kunna editera bokningar.
+Vi har uppdaterat resource page för att använda korrekta api:er, lägga till avboka, ta bort och ändra bokning funktioner och se till att endast inloggade användare kan komma in på detaljvyn över varje resurs och dess bokningar och att endast admin kan se allas bokningar (övriga användare ser endast sina egna). 
 
 
 **Filer som har lagts till / ändrats:**
@@ -104,7 +114,6 @@ Vi har uppdaterat resource page för att använda korrekta api:er, lägga till a
 - src/pages/Login.jsx
 - src/pages/Register.jsx
 - src/pages/Resource.jsx
-- src/pages/EditBooking.jsx
 - src/App.jsx
 
 ### Anrop utan token
@@ -208,7 +217,7 @@ Resultat från testet:
 ![image](public/krav2-test.png)
 
 
-## Krav 3
+## Krav 3 - Kommentarer
 
 ### I backend:
 
@@ -337,7 +346,7 @@ Denna funktion används i en route som tar emot resource id och date och skickar
 - routes/resources.js
 
 
-## I Frontend
+### I Frontend
 
 Vi har lagt in en ny API funktion som anropar getAvailability från backend. I Resource.jsx så hämtas dagens datum som tillsammans med den aktuella resursens id skickas med i ett anrop till getAvailability funktionen. Svaret med slots sparas i en variabel som använss i formuläret för att boka en ny tid. För varje slot så kollas först att början på slot-tiden inte har passerat i nuvarande tid och sedan skapad en div i ett rutnät med start och slut tid. Datan available kollas på sloten och om den är true så blir diven klickbar och om användaren väljer denna tid så sparas start och slut tiden från sloten som skickas med som bokningens start och slut tid. Om användaren väljer ett annat datum så laddas slotsen om med det nya datumet.
 
@@ -345,3 +354,43 @@ Vi har lagt in en ny API funktion som anropar getAvailability från backend. I R
 
 - src/api/resources.js
 - src/pages/Resources.jsx
+
+
+## Krav 6 - Fördjupad testning
+
+### I backend
+
+Vi har skrivit enhetstester som testar funktionerna controlBookingPolicy och intervalsOverlap i domain-mappen. Vi testar att controlBookingPolicy returnerar false när den tar emot värden så att 1: bokningen är för lång, 2: bokningen är dåtid och 3: användaren har för många bokningar. Vi testat även att intervalsOverlap 1: returnerar true (alltså överlappning) när den tar emot värden så att tiderna överlappar varandra, 2: returnerar false (alltså ingen överlappning) när tiderna är kant i kant och 3: returnerar true när en bokning är helt inuti en annan bokning.
+
+Vi har även skrivit integrationstester för booking, resource, users och comments routerna för att se till att de fungerar som de ska. 
+
+I comments.test.ja så testas alla comments routes för att se att de returnerar förväntat resultat. GET routsen '/api/comments/booking/:id' kollas att anrop med id som inte existerar returnerar med 404. GET routen '/api/comments/user/' kollas att admin kan hämta alla kommentarer, att en användare inte kan hämta kommentarer från en annan användare och att ett anrop med id som inte existerar returnerar 200 och en tom array. PUT och DELETE routerna kollas även att admin kan ändra / ta bort alla användares kommentarer och att en vänlig användare inte kan ändra /ta bort någon annan användares kommentarer.
+
+I resorces.test.js så testas GET '/api/resources' och GET '/api/resources/:id' att de returnerar 200 och förväntat resultat när anropet är korrekt och att GET '/api/resources/:id' returnerar felkod 500 när felaktig resurs id tas med i anropet.
+
+I users.test.js så testas alla user routes för att se att de returnerar förväntat resultat. GET '/api/users/:id' testas med felaktigt user id för att kolla att felkod 500 returneras. 
+
+I bookings.test.js så testas alla booking routes för att se att de returnerar förväntat resultat. POST '/api/bookings' testas också med en tid som redan är bokad och det kollas att det returneras felkod 409 och korrekt felmeddelande. PUT '/api/bookings' testas även så att bokingen förlängs så att den blir mer än 4 timmar och det kollas att det returnerar 409.
+
+Vi testar här även JWT tokens genom att testa att skicka en GET request utan token och kollar att det returnerar 401, Vi testar även samma sak fast med en påhittad token och att det returnerar 401. Vi testar även att om en vanlig användare hämtar bokningar, att den bara får sina egna bokningar. Vi testar även att en student inte ska kunna avboka en bokning.
+
+Vi har även två broker tester som mockar svaret från brokern för att se till att routern ger rätt felkoder när man försöker boka en resurs som är full och när brokern är unreachable.
+
+I socketio.test.js görs ett test som kollar att socketkopplingen fungerar som den ska.
+
+I login.test.js så testar vi att en användare kan logga in och registrera sig. Vi testar även att en användare inte kan registrera sig med samma email som en existerande användare, att routen returnerar 400 om en feild (i vårt fall lösen) saknas och att man inte kan logga in med fel lösenord.
+
+
+Vi hade kunnat testa många flera saker om vi hade haft mer tid, men vi försökte prioritera vissa saker. Det är viktigt att alla routes fungerar som det ska och returnerar förväntat resultat om hemsidan ska fungera så det försökte vi täcka så mycket som möjligt. Det är också viktigt att försöka hitta saker som kan bli fel, antingen i kodning eller när användare hanterar hemsidan. Vi har försökt hitta saker som kan bli fel och kontrollerat att routen klarar av felhanteringen och returnerar förväntade felkoder. Vanliga saker kan vara att resurser, bokningar, kommentarer med mera inte finns i databasen eller att bokningen bryter mot någon policy som gör att det blir fel i bokningssystemet. Säkerhet är också en viktig sak att testa så därför har vi testat att JWT autentiseringen fungerar som de ska på de skyddade routsen.
+
+På grund av brist av tid så hann vi inte med att skriva några E2-tester i frontend, dessa är såklart också viktiga men vi fick prioritera att hinna skriva klart backend testerna.
+
+**Filer som har lagts till / ändrats:**
+
+- test/bookings.test.js
+- test/comments.test.js
+- test/domain.test.js
+- test/login.test.js
+- test/resource.test.js
+- test/socketio.test.js
+- test/users.test.js
