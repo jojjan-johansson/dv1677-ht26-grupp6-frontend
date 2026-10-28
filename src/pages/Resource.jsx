@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
+import BookingComments from "../components/BookingComments.jsx";
 
 import { getResource, getAvailability } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
@@ -37,6 +37,7 @@ export default function Recource() {
   const [diskGb, setDiskGb] = useState(1);
   const [error, setError] = useState("");
 
+  // Hämta bokningar för vald resurs.
   const loadBookings = useCallback(async () => {
     if (!token || !resourceId) return
     const b = await getBookingsByResource(token, resourceId)
@@ -70,7 +71,9 @@ export default function Recource() {
 
     socket.on("connect", () => {
       console.log("Socket.io ansluten:", socket.id);
+
       socket.emit("join", `resource:${resourceId}`);
+
       handleBookingChange();
     });
 
@@ -90,6 +93,7 @@ export default function Recource() {
       socket.off("booking:updated", handleBookingChange);
       socket.off("booking:canceled", handleBookingChange);
       socket.off("booking:deleted", handleBookingChange);
+
       socket.disconnect();
     };
   }, [token, resourceId, loadBookings]);
@@ -159,6 +163,7 @@ export default function Recource() {
     user?.role
   ]);
 
+  // Hitta användarens e-postadress.
   const getUserEmail = (userId) => {
     const id =
       typeof userId === "object"
@@ -178,6 +183,7 @@ export default function Recource() {
     return id || "Okänd användare";
   };
 
+  // Formatera bokningens datum och tid.
   const formattedTime = (startTimeValue, endTimeValue) => {
     const start = new Date(startTimeValue);
     const end = new Date(endTimeValue);
@@ -198,7 +204,7 @@ export default function Recource() {
     return start <= currentTime;
   }
 
-  // Skapa bokning med Beckas broker-behov.
+
   const createABooking = async (event) => {
     event.preventDefault();
     setError("");
@@ -317,18 +323,18 @@ export default function Recource() {
       </button>
 
       <div className="booking_card">
-      <h2>{resource.name}</h2>
+        <h2>{resource.name}</h2>
 
-      <div className="resource-meta">
-        <p>Provider: {resource.provider}</p>
-        <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
-        <p>Kapacitet:</p>
-        <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
-        <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
-        {resource.provider === "proxmox" && (
-          <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
-        )}
-      </div>
+        <div className="resource-meta">
+          <p>Provider: {resource.provider}</p>
+          <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+          <p>Kapacitet:</p>
+          <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+          <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
+          {resource.provider === "proxmox" && (
+            <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -399,6 +405,12 @@ export default function Recource() {
                   </button>
                 </>
               )}
+
+              {/* Krav 3: Kommentarer för bokningen */}
+              <BookingComments
+                bookingId={booking._id}
+                resourceId={resourceId}
+              />
             </div>
           );
         })
