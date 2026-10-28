@@ -6,6 +6,7 @@ import BookingComments from "../components/BookingComments.jsx";
 import { getResource } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
 import {
+  getBookingsByResource,
   createBooking,
   cancelBooking,
   editBooking
@@ -36,27 +37,13 @@ export default function Recource() {
 
   // Hämta bokningar för vald resurs.
   const loadBookings = useCallback(async () => {
-    if (!token || !resourceId) return;
-
-    const baseUrl = import.meta.env.VITE_API_URL || "";
-
-    const response = await fetch(
-      `${baseUrl}/api/bookings/resource/${resourceId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Kunde inte hämta resursens bokningar.");
-    }
-
-    const data = await response.json();
-
-    setBookings(Array.isArray(data) ? data : []);
-  }, [token, resourceId]);
+      if (!token || !resourceId) return
+      const b = await getBookingsByResource(token, resourceId)
+      setBookings(b)
+      console.log(b
+        
+      )
+    }, [token, resourceId])
 
   // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
@@ -337,16 +324,19 @@ export default function Recource() {
       >
         ← Tillbaka till resurser
       </button>
-
+      
       <h2>{resource.name}</h2>
 
-      <p>
-        {resource.type} — {resource.description}
-      </p>
+<p>
+  {resource.type} – {resource.description}
+</p>
 
-      <p>
-        Kapacitet: {formatCapacity(resource.capacity)}
-      </p>
+<div className="resource-meta">
+  <p>Provider: {resource.provider ?? "Ej angivet"}</p>
+  <p>{resource.active ? "Aktiv" : "Oaktiv"}</p>
+
+  <p>Kapacitet: {formatCapacity(resource.capacity)}</p>
+</div>
 
       {error && (
         <p role="alert">{error}</p>
