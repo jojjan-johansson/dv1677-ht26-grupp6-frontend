@@ -20,3 +20,7 @@ export function getResources() {
 export function getResource(id) {
   return requestGet(`/api/resources/${id}`)
 }
+
+export function getAvailability(id, date) {
+  return requestGet(`/api/resources/${id}/availability?date=${date}`)
+}

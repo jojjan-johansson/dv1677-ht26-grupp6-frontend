@@ -294,7 +294,7 @@ main {
     margin-bottom: 1.4rem;
 }
 
-.date {
+.new_booking_card {
   background: #fff;
   border-radius: 8px;
   padding: 0.5rem;
@@ -302,8 +302,17 @@ main {
   margin-bottom: 1rem;
 }
 
-.date input {
-  margin: 10px;
+.new_booking_card label {
+  display: block;
+}
+
+.new_booking_card input {
+  margin-bottom: 15px;
+}
+
+.new_booking_card select {
+  width: 60%;
+  padding: 10px;
 }
 
 .timeslots {
@@ -344,6 +353,17 @@ main {
 
 .blue:hover {
   background-color: rgb(61, 61, 190);
+}
+
+.booking_card {
+  padding: 10px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.139);
+  margin-bottom: 1rem;
+}
+
+.main_label {
+  font-size: large;
+  margin-bottom: 20px;
 }
 
 .wants {
@@ -392,8 +412,14 @@ main {
     flex-direction: column;
 }
 
+.resource-meta p {
+  margin-bottom: 0.5rem;
+}
+
+
 input,
-textarea {
+textarea,
+select {
     margin-bottom: 1.4rem;
     font-size: 1rem;
     padding: 0.8rem;

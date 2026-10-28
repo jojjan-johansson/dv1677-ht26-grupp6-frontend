@@ -34,28 +34,13 @@ export default function Homepage() {
           <h3>{resource.name}</h3>
 
           <div className="resource-meta">
-            <p>Typ: {resource.type ?? "Ej angivet"}</p>
-
-            <p>{resource.description}</p>
-
-            <p>Provider: {resource.provider ?? "Ej angivet"}</p>
-
-            <p>{resource.active ? "Aktiv" : "Oaktiv"}</p>
-
+            <p>Provider: {resource.provider}</p>
+            <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
             <p>Kapacitet:</p>
-
-            <p>
-              vCPU: {resource.capacity?.vcpus ?? "Ej angivet"}
-            </p>
-
-            <p>
-              RAM: {resource.capacity?.ramMb ?? "Ej angivet"} MB
-            </p>
-
+            <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+            <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
             {resource.provider === "proxmox" && (
-              <p>
-                Disk: {resource.capacity?.diskGb ?? "Ej angivet"} GB
-              </p>
+              <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
             )}
           </div>
 

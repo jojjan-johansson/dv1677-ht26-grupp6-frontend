@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import BookingComments from "../components/BookingComments.jsx";
 
-import { getResource } from "../api/resources.js";
+import { getResource, getAvailability } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
 import {
   getBookingsByResource,
@@ -25,6 +25,8 @@ export default function Recource() {
   const [bookings, setBookings] = useState([]);
   const [users, setUsers] = useState([]);
   const [bookedBy, setBookedBy] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null)
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [date, setDate] = useState(
@@ -37,13 +39,19 @@ export default function Recource() {
 
   // Hämta bokningar för vald resurs.
   const loadBookings = useCallback(async () => {
-      if (!token || !resourceId) return
-      const b = await getBookingsByResource(token, resourceId)
-      setBookings(b)
-      console.log(b
-        
-      )
-    }, [token, resourceId])
+    if (!token || !resourceId) return
+    const b = await getBookingsByResource(token, resourceId)
+    setBookings(b)
+  }, [token, resourceId])
+
+  
+  const loadAvailability = useCallback(async () => {
+    if (!resourceId) return
+    const s = await getAvailability(resourceId, date)
+    setSlots(s)
+    setSelectedSlot(null)
+
+  }, [resourceId, date])
 
   // Socket.io: uppdatera bokningarna i realtid.
   useEffect(() => {
@@ -90,6 +98,14 @@ export default function Recource() {
     };
   }, [token, resourceId, loadBookings]);
 
+  useEffect(() => {
+    if (!resourceId) return;
+
+    loadAvailability().catch((err) => {
+      setError(err.message);
+    });
+  }, [resourceId, loadAvailability]);
+
   // Hämta resurs, användare och bokningar.
   useEffect(() => {
     if (!resourceId) {
@@ -110,7 +126,9 @@ export default function Recource() {
           setResource(resourceData);
         }
 
-        await loadBookings();
+        await loadBookings().catch((err) => {
+          setError(err.message);
+        });
 
         if (user?.role === "admin") {
           const userData = await getUsers();
@@ -179,36 +197,14 @@ export default function Recource() {
     })}`;
   };
 
-  // Visa resursens kapacitet utan att React kraschar.
-  const formatCapacity = (capacity) => {
-    if (capacity === null || capacity === undefined) {
-      return "Ej angiven";
-    }
+  const timeInPast = (startTime) => {
+    const start = new Date(startTime).getTime();
+    const currentTime = Date.now();
 
-    if (typeof capacity !== "object") {
-      return String(capacity);
-    }
+    return start <= currentTime;
+  }
 
-    const parts = [];
 
-    if (capacity.vcpus !== undefined) {
-      parts.push(`${capacity.vcpus} vCPU`);
-    }
-
-    if (capacity.ramMb !== undefined) {
-      parts.push(`${capacity.ramMb} MB RAM`);
-    }
-
-    if (capacity.diskGb !== undefined) {
-      parts.push(`${capacity.diskGb} GB disk`);
-    }
-
-    return parts.length > 0
-      ? parts.join(", ")
-      : "Ej angiven";
-  };
-
-  // Skapa bokning med Beckas broker-behov.
   const createABooking = async (event) => {
     event.preventDefault();
     setError("");
@@ -246,7 +242,7 @@ export default function Recource() {
         booked_by: bookedBy,
         start_time: startTime,
         end_time: endTime,
-        want
+        want: want
       };
 
       await createBooking(token, data);
@@ -258,6 +254,7 @@ export default function Recource() {
       setDiskGb(1);
 
       await loadBookings();
+      await loadAvailability();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -324,23 +321,27 @@ export default function Recource() {
       >
         ← Tillbaka till resurser
       </button>
-      
-      <h2>{resource.name}</h2>
 
-<p>
-  {resource.type} – {resource.description}
-</p>
+      <div className="booking_card">
+        <h2>{resource.name}</h2>
 
-<div className="resource-meta">
-  <p>Provider: {resource.provider ?? "Ej angivet"}</p>
-  <p>{resource.active ? "Aktiv" : "Oaktiv"}</p>
-
-  <p>Kapacitet: {formatCapacity(resource.capacity)}</p>
-</div>
+        <div className="resource-meta">
+          <p>Provider: {resource.provider}</p>
+          <p>Status: {resource.active ? ("Aktiv") : ("Oaktiv")}</p>
+          <p>Kapacitet:</p>
+          <p>vcpus: {Math.round(resource.capacity?.vcpus)}</p>
+          <p>ramMb: {Math.round(resource.capacity?.ramMb)}</p>
+          {resource.provider === "proxmox" && (
+            <p>diskGb: {Math.round(resource.capacity?.diskGb)}</p>
+          )}
+        </div>
+      </div>
 
       {error && (
         <p role="alert">{error}</p>
       )}
+
+      <div className="booking_card">
 
       <h3>Bokningar</h3>
 
@@ -416,6 +417,10 @@ export default function Recource() {
       ) : (
         <p>Inga bokningar för denna resurs.</p>
       )}
+      </div>
+
+
+      <div className="booking_card">
 
       <h3>Ny bokning</h3>
 
@@ -425,7 +430,8 @@ export default function Recource() {
       >
         {user?.role === "admin" && (
           <>
-            <label htmlFor="booked_by">
+            <div className="new_booking_card">           
+            <label htmlFor="booked_by" className="main_label">
               Användare
             </label>
 
@@ -446,11 +452,12 @@ export default function Recource() {
                 </option>
               ))}
             </select>
+             </div>
           </>
         )}
 
-        <div className="date">
-          <label htmlFor="date">
+        <div className="new_booking_card">
+          <label htmlFor="date" className="main_label">
             Dag
           </label>
 
@@ -464,40 +471,48 @@ export default function Recource() {
           />
         </div>
 
-        <label htmlFor="start_time">
-          Starttid
-        </label>
+        <div className="timeslots">
+          <label className="main_label">Tillgängliga tider</label>
+          <div className="slot-grid">
+          {slots.map(slot => {
+            if (timeInPast(slot.startsAt)){
+              return(null)
+            } else {
+              const hour = new Date(slot.startsAt).getHours()
 
-        <input
-          id="start_time"
-          type="datetime-local"
-          value={startTime}
-          onChange={(event) =>
-            setStartTime(event.target.value)
-          }
-          required
-        />
+              const isSelected = selectedSlot?.startsAt === slot.startsAt
+              return (
+                <div
+                key={slot.startsAt} className={`slot ${!slot.available ? 'booked' : isSelected ? 'selected' : 'available'}`}
+                onClick={() => {
+                if (!slot.available) return;
 
-        <label htmlFor="end_time">
-          Sluttid
-        </label>
-
-        <input
-          id="end_time"
-          type="datetime-local"
-          value={endTime}
-          onChange={(event) =>
-            setEndTime(event.target.value)
-          }
-          required
-        />
+                if (isSelected) {
+                  setSelectedSlot(null);
+                  setStartTime("");
+                  setEndTime("");
+                } else {
+                  setSelectedSlot(slot);
+                  setStartTime(slot.startsAt);
+                  setEndTime(slot.endsAt);
+                }
+              }}
+                >
+                  {hour}:00 – {hour + 1}:00
+                </div>
+              )
+            }
+            
+          })}
+          </div>
+        </div>
 
         {(resource.provider === "openstack" ||
           resource.provider === "proxmox") && (
           <div>
-            <label>Behov</label>
-
             <div className="wants">
+              <label className="main_label">Behov</label>
+
               <label htmlFor="vcpus">
                 vCPUs
               </label>
@@ -562,6 +577,7 @@ export default function Recource() {
           {saving ? "Sparar..." : "Boka"}
         </button>
       </form>
+      </div>
     </main>
   );
 }
