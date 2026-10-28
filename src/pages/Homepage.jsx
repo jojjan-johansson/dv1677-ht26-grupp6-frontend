@@ -44,7 +44,12 @@ export default function Homepage() {
           <div className="resource-meta">
             <p>Typ: {resource.type}</p>
             <p>{resource.description}</p>
-            <p>Kapacitet: {resource.capacity}</p>
+            <p>
+  Kapacitet:{" "}
+  {typeof resource.capacity === "object" && resource.capacity !== null
+    ? `${resource.capacity.vcpus ?? "–"} vCPU, ${resource.capacity.ramMb ?? "–"} MB RAM, ${resource.capacity.diskGb ?? "–"} GB disk`
+    : resource.capacity}
+</p>
           </div>
 
           <button

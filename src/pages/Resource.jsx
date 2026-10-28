@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
+import BookingComments from "../components/BookingComments.jsx";
 
 import { getResource } from "../api/resources.js";
 import { getUsers } from "../api/users.js";
@@ -34,6 +34,7 @@ export default function Recource() {
   const [diskGb, setDiskGb] = useState(1);
   const [error, setError] = useState("");
 
+  // Hämta bokningar för vald resurs.
   const loadBookings = useCallback(async () => {
     if (!token || !resourceId) return;
 
@@ -75,7 +76,9 @@ export default function Recource() {
 
     socket.on("connect", () => {
       console.log("Socket.io ansluten:", socket.id);
+
       socket.emit("join", `resource:${resourceId}`);
+
       handleBookingChange();
     });
 
@@ -95,6 +98,7 @@ export default function Recource() {
       socket.off("booking:updated", handleBookingChange);
       socket.off("booking:canceled", handleBookingChange);
       socket.off("booking:deleted", handleBookingChange);
+
       socket.disconnect();
     };
   }, [token, resourceId, loadBookings]);
@@ -154,6 +158,7 @@ export default function Recource() {
     user?.role
   ]);
 
+  // Hitta användarens e-postadress.
   const getUserEmail = (userId) => {
     const id =
       typeof userId === "object"
@@ -173,6 +178,7 @@ export default function Recource() {
     return id || "Okänd användare";
   };
 
+  // Formatera bokningens datum och tid.
   const formattedTime = (startTimeValue, endTimeValue) => {
     const start = new Date(startTimeValue);
     const end = new Date(endTimeValue);
@@ -184,6 +190,35 @@ export default function Recource() {
       dateStyle: "short",
       timeStyle: "short"
     })}`;
+  };
+
+  // Visa resursens kapacitet utan att React kraschar.
+  const formatCapacity = (capacity) => {
+    if (capacity === null || capacity === undefined) {
+      return "Ej angiven";
+    }
+
+    if (typeof capacity !== "object") {
+      return String(capacity);
+    }
+
+    const parts = [];
+
+    if (capacity.vcpus !== undefined) {
+      parts.push(`${capacity.vcpus} vCPU`);
+    }
+
+    if (capacity.ramMb !== undefined) {
+      parts.push(`${capacity.ramMb} MB RAM`);
+    }
+
+    if (capacity.diskGb !== undefined) {
+      parts.push(`${capacity.diskGb} GB disk`);
+    }
+
+    return parts.length > 0
+      ? parts.join(", ")
+      : "Ej angiven";
   };
 
   // Skapa bokning med Beckas broker-behov.
@@ -309,7 +344,9 @@ export default function Recource() {
         {resource.type} — {resource.description}
       </p>
 
-      <p>Kapacitet: {resource.capacity}</p>
+      <p>
+        Kapacitet: {formatCapacity(resource.capacity)}
+      </p>
 
       {error && (
         <p role="alert">{error}</p>
@@ -377,6 +414,12 @@ export default function Recource() {
                   </button>
                 </>
               )}
+
+              {/* Krav 3: Kommentarer för bokningen */}
+              <BookingComments
+                bookingId={booking._id}
+                resourceId={resourceId}
+              />
             </div>
           );
         })
