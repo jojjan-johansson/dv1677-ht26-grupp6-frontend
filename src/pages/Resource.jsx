@@ -41,7 +41,13 @@ export default function Recource() {
   const loadBookings = useCallback(async () => {
     if (!token || !resourceId) return
     const b = await getBookingsByResource(token, resourceId)
-    setBookings(b)
+
+    if(user?.role === "admin") {
+      setBookings(b)
+    } else {
+      const sortedB = b.filter(obj => obj.booked_by === user._id)
+      setBookings(sortedB)
+    }
   }, [token, resourceId])
 
   
@@ -353,8 +359,7 @@ export default function Recource() {
               : booking.booked_by;
 
           const canManage =
-            user?.role === "admin" ||
-            String(ownerId) === String(user?._id);
+            user?.role === "admin";
 
           const isActive =
             booking.status !== "canceled" &&
@@ -379,32 +384,33 @@ export default function Recource() {
               <p className="status">
                 {booking.status}
               </p>
-
-              {canManage && isActive && (
+              {isActive && (
                 <>
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={saving}
-                    onClick={() =>
-                      cancelTheBooking(booking._id)
-                    }
-                  >
-                    Avboka
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={saving}
-                    onClick={() =>
-                      editTheBooking(booking)
-                    }
-                  >
-                    Förläng din bokning med 1 timme
-                  </button>
-                </>
+                  {canManage && (
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={saving}
+                      onClick={() =>
+                        cancelTheBooking(booking._id)
+                      }
+                    >
+                      Avboka
+                    </button>
+                  )}
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={saving}
+                      onClick={() =>
+                        editTheBooking(booking)
+                      }
+                    >
+                      Förläng din bokning med 1 timme
+                    </button>
+                  </>
               )}
+              
 
               {/* Krav 3: Kommentarer för bokningen */}
               <BookingComments
