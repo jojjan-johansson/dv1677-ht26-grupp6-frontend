@@ -41,13 +41,7 @@ export default function Recource() {
   const loadBookings = useCallback(async () => {
     if (!token || !resourceId) return
     const b = await getBookingsByResource(token, resourceId)
-
-    if(user?.role === "admin") {
-      setBookings(b)
-    } else {
-      const sortedB = b.filter(obj => obj.booked_by === user._id)
-      setBookings(sortedB)
-    }
+    setBookings(b)
   }, [token, resourceId])
 
   
@@ -186,7 +180,7 @@ export default function Recource() {
       return user.email || id;
     }
 
-    return id || "Okänd användare";
+    return "Annan användare";
   };
 
   // Formatera bokningens datum och tid.
